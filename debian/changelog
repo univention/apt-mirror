@@ -1,3 +1,22 @@
+apt-mirror (0.4.4-4) unstable; urgency=low
+
+  * Fixed typos in the Package Description and Man page (Closes: #385645)
+  * Added "set _tilde 0" to default config to allow proper download of 
+    mirrors with a tilde in the url or package name (Closes: #386162)
+
+ -- Brandon Holtsclaw <brandon@imbrandon.com>  Thu,  7 Sep 2006 21:06:27 -0500
+
+apt-mirror (0.4.4-3) unstable; urgency=low
+
+  * Added the GPL preamble to debian/copyright 
+  * Raised debhelper compat to 5 from 3 
+  * Changed download and clean.sh size calculations to return human readable output ( KiB,MiB,GiB vs bytes )
+  * added clean.sh to postinstall to make it +x on install
+  * Added debian/watch
+  * Closes RFP Bug 293048 (Closes: #293048)
+
+ -- Brandon Holtsclaw <brandon@imbrandon.com>  Wed, 09 Aug 2006 06:08:26 -0500
+
 apt-mirror (0.4.4-2) unstable; urgency=low
 
   * Bugfix: default architecture identification on non-debian systems v2

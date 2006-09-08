@@ -12,22 +12,22 @@ apt-mirror [configfile]
 
 =head1 DESCRIPTION
 
-A small tool that provides ability to mirror any parts (or even all) of Debian GNU/Linux distribution
-or any other apt sources which often provided by different debian developers.
+A small and efficient tool that lets you mirror a part of or
+the whole Debian GNU/Linux distribution or any other apt sources.
 
-Projects main goals:
- * It takes config similar to apts F<sources.list>
- * It is fully pool comply
+Main features:
+ * It uses a config similar to apts F<sources.list>
+ * It's fully pool comply
  * It supports multithreaded downloading
  * It supports multiple architectures at the same time
  * It can automatically remove unneeded files
- * It successfully works on overloaded channel to internet
- * It never makes inconsistent mirror including while mirroring
+ * It works well on overloaded channel to internet
+ * It never produces an inconsistent mirror including while mirroring
  * It works on all POSIX complied systems with perl and wget
 
 =head1 COMMENTS
 
-apt-mirror uses F</etc/apt/mirror-list> as a configuration file.
+apt-mirror uses F</etc/apt/mirror.list> as a configuration file.
 By default it is tuned to official debian mirror in Finland. Change
 it for your needs.
 
@@ -68,7 +68,7 @@ use strict;
 use File::Copy;
 use File::Path;
 use File::Basename;
- 
+
 my $config_file;
 
 my %config_variables = (
@@ -106,6 +106,46 @@ chomp $config_variables{"defaultarch"};
 
 ######################################################################################
 ## Common subroutines
+
+sub round_number
+{
+	my $n = shift;
+	my $minus = $n < 0 ? '-' : '';
+	$n = abs($n);
+	$n = int(($n + .05) * 10) / 10;
+	$n .= '.0' unless $n =~ /\./;
+	$n .= '0' if substr($n,(length($n) - 1),1) eq '.';
+	chop $n if $n =~ /\.\d\d0$/;
+	return "$minus$n";
+}
+
+sub format_bytes {
+	my $bytes = shift;
+	my $bytes_out = '0';
+	my $size_name = 'bytes';
+	my $KiB = 1024;
+	my $MiB = 1024 * 1024;
+	my $GiB = 1024 * 1024 * 1024;
+
+	if ($bytes >= $KiB) {
+		$bytes_out = $bytes / $KiB;
+		$size_name = 'KiB';
+		if ($bytes >= $MiB) {
+			$bytes_out = $bytes / $MiB;
+			$size_name = 'MiB';
+			if ($bytes >= $GiB) {
+				$bytes_out = $bytes / $GiB;
+				$size_name = 'GiB';
+			}
+		}
+	} else {
+		$bytes_out = $bytes;
+		$size_name = 'bytes';
+	}
+
+	$bytes_out = round_number($bytes_out);
+	return "$bytes_out $size_name";
+}
 
 sub get_variable {
     my $value = $config_variables{shift @_};
@@ -313,8 +353,8 @@ sub remove_spaces($) {
 sub proceed_index_gz {
     my $uri = shift;
     my $index = shift;
-    my ($path, $package, $mirror, $files);
-    
+    my ($path, $package, $mirror, $files) = '';
+
     $path = $uri;
     $path =~ s[^(\w+)://][];
     $path =~ s/~/\%7E/g if get_variable("_tilde");
@@ -406,7 +446,10 @@ my $need_bytes = 0;
 foreach (values %urls_to_download) {
     $need_bytes += $_;
 }
-print "$need_bytes bytes will be downloaded into archive.\n";
+
+my $size_output = format_bytes($need_bytes);
+
+print "$size_output will be downloaded into archive.\n";
 
 download_urls("archive", sort keys %urls_to_download);
 
@@ -481,7 +524,8 @@ my ($i, $total) = (0, scalar @rm_files);
 
 if(get_variable("_autoclean")) {
 
-    print "$unnecessary_bytes bytes in $total files and " . scalar(@rm_dirs) . " directories will be freed...";
+    my $size_output = format_bytes($unnecessary_bytes);
+    print "$size_output in $total files and " . scalar(@rm_dirs) . " directories will be freed...";
 
     chdir get_variable("mirror_path") or die("apt-mirror: can't chdir to mirror");
 
@@ -490,7 +534,8 @@ if(get_variable("_autoclean")) {
 
 } else {
 
-    print "$unnecessary_bytes bytes in $total files and " . scalar(@rm_dirs) . " directories can be freed.\n";
+    my $size_output = format_bytes($unnecessary_bytes);
+    print "$size_output in $total files and " . scalar(@rm_dirs) . " directories can be freed.\n";
     print "Run " . get_variable("cleanscript") . " for this purpose.\n\n";
 
     print CLEAN "cd " . get_variable("mirror_path") . " || exit 1\n\n";
