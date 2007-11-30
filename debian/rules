@@ -1,19 +1,13 @@
 #!/usr/bin/make -f
-# Sample debian/rules that uses debhelper.
 # GNU copyright 1997 to 1999 by Joey Hess.
 
-# Uncomment this to turn on verbose mode.
-#export DH_VERBOSE=1
-
-# This is the debhelper compatibility version to use.
-export DH_COMPAT=5
-
+version = $(shell uscan --dehs | sed -n 's/.*<upstream-version>\(.*\)<\/upstream-version>.*/\1/p')
+builddist = $(shell lsb_release -si)
 
 build: build-stamp
 
 build-stamp:
 	dh_testdir
-
 	touch build-stamp
 
 clean:
@@ -21,6 +15,8 @@ clean:
 	dh_testroot
 	rm -f build-stamp
 	rm -f debian/conffiles
+	dpatch deapply-all
+	rm -rf debian/patched
 	dh_clean
 
 install: build
@@ -29,12 +25,17 @@ install: build
 	dh_clean -k
 	dh_installdirs
 
+	dpatch apply-all
 	install -g root -o root -m 755 \
 		apt-mirror debian/apt-mirror/usr/bin/apt-mirror
 	install -g root -o root -m 644 \
-		mirror.list debian/apt-mirror/etc/apt/mirror.list
+		debian/${builddist}-mirror.list debian/apt-mirror/etc/apt/mirror.list
 	install -d -g root -o root -m 0755 debian/apt-mirror/usr/share/man/man1
 	pod2man apt-mirror | gzip -9 -c > debian/apt-mirror/usr/share/man/man1/apt-mirror.1.gz
+
+
+get-orig-source:
+	uscan --verbose --force-download
 
 
 # Build architecture-independent files here.
@@ -45,28 +46,13 @@ binary-indep: build install
 binary-arch: build install
 	dh_testdir
 	dh_testroot
-#	dh_installdebconf	
 	dh_installdocs
-	dh_installexamples
-	dh_installmenu
-#	dh_installlogrotate
-#	dh_installemacsen
-#	dh_installpam
-#	dh_installmime
-#	dh_installinit
 	dh_installcron
-	dh_installman
 	dh_installinfo
-#	dh_undocumented
 	dh_installchangelogs 
-	dh_link
-	dh_strip
 	dh_compress
 	dh_fixperms
-#	dh_makeshlibs
 	dh_installdeb
-#	dh_perl
-	dh_shlibdeps
 	dh_gencontrol
 	dh_md5sums
 	dh_builddeb

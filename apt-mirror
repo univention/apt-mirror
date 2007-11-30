@@ -39,7 +39,7 @@ Or uncomment line in F</etc/cron.d/apt-mirror> to enable daily mirror upgrades.
 
 =head1 FILES
 
-F</etc/apt/mirror-list>
+F</etc/apt/mirror.list>
         Main configuration file
 
 F</etc/cron.d/apt-mirror>
@@ -81,7 +81,7 @@ my %config_variables = (
     "cleanscript" => '$var_path/clean.sh',
     "_contents"   => 1,
     "_autoclean"  => 0,
-    "_tilde"	  => 1
+    "_tilde"	  => 0
 );
 
 my @config_binaries = ();
@@ -222,7 +222,7 @@ while(<CONFIG>) {
 	next;
     }
 
-    if($config_line =~ /deb-(alpha|amd64|arm|hppa|hurd-i386|i386|ia64|m68k|mips|mipsel|powerpc|s390|sh|sparc)/) {
+    if($config_line =~ /deb-(alpha|amd64|armel|arm|hppa|hurd-i386|i386|ia64|lpia|m68k|mipsel|mips|powerpc|s390|sh|sparc)/) {
 	push @config_binaries, [$1, @config_line];
 	next;
     }
@@ -235,7 +235,7 @@ while(<CONFIG>) {
     if($config_line eq "skip-clean") {
 	$config_line[0] =~ s[^(\w+)://][];
 	$config_line[0] =~ s[/$][];
-	$config_line[0] =~ s[~][%7E] if get_variable("_tilde");
+	$config_line[0] =~ s[~][%7E]g if get_variable("_tilde");
 	$skipclean{$config_line[0]} = 1;
 	next;
     }
@@ -243,7 +243,7 @@ while(<CONFIG>) {
     if($config_line eq "clean") {
 	$config_line[0] =~ s[^(\w+)://][];
 	$config_line[0] =~ s[/$][];
-	$config_line[0] =~ s[~][%7E] if get_variable("_tilde");
+	$config_line[0] =~ s[~][%7E]g if get_variable("_tilde");
 	$clean_directory{$config_line[0]} = 1;
 	next;
     }
@@ -316,7 +316,7 @@ download_urls("index", @index_urls);
 
 foreach (keys %urls_to_download) {
     s[^(\w+)://][];
-    s[~][%7E] if get_variable("_tilde");
+    s[~][%7E]g if get_variable("_tilde");
     $skipclean{$_} = 1;
     $skipclean{$_} = 1 if s[\.gz$][];
 }
@@ -330,11 +330,25 @@ open FILES_ALL, ">" . get_variable("var_path") . "/ALL" or die("apt-mirror: can'
 open FILES_NEW, ">" . get_variable("var_path") . "/NEW" or die("apt-mirror: can't write to intermediate file (NEW)");
 open FILES_MD5, ">" . get_variable("var_path") . "/MD5" or die("apt-mirror: can't write to intermediate file (MD5)");
 
+my %stat_cache = ();
+
+sub _stat {
+  my ($filename) = shift;
+  return @{$stat_cache{$filename}} if exists $stat_cache{$filename};
+  my @res = stat($filename);
+  $stat_cache{$filename} = \@res;
+  return @res;
+}
+
+sub clear_stat_cache {
+  %stat_cache = ();
+}
+
 sub need_update {
     my $filename = shift;
     my $size_on_server = shift;
 
-    my (undef, undef, undef, undef, undef, undef, undef, $size) = stat($filename);
+    my (undef, undef, undef, undef, undef, undef, undef, $size) = _stat($filename);
 
     return 1 unless($size);
     return 0 if $size_on_server == $size;
@@ -430,6 +444,8 @@ foreach (@config_binaries) {
     }
 }
 
+clear_stat_cache();
+
 print "]\n\n";
 
 close FILES_ALL;
@@ -489,7 +505,9 @@ sub process_symlink {
 
 sub process_file {
     my $file = shift;
+    $file =~ s[~][%7E]g if get_variable("_tilde");
     return 1 if $skipclean{$file};
+    $file =~ s[%7E][~] if get_variable("_tilde");
     push @rm_files, $file;
     my (undef, undef, undef, undef, undef, undef, undef, $size, undef, undef, undef, undef, $blocks) = stat($file);
     $unnecessary_bytes += $blocks * 512;

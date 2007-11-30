@@ -2,7 +2,9 @@ Source: apt-mirror
 Section: net
 Priority: optional
 Maintainer: Brandon Holtsclaw <brandon@imbrandon.com>
-Build-Depends: debhelper (>= 5)
+Homepage: http://apt-mirror.sourceforge.net/
+Build-Depends: debhelper (>= 5), dpatch
+Build-Depends-Indep: lsb-release
 Standards-Version: 3.7.2
 
 Package: apt-mirror
@@ -13,7 +15,7 @@ Description: APT sources mirroring tool
  the whole Debian GNU/Linux distribution or any other apt sources.
  .
  Main features:
-  * It uses a config similar to apts F<sources.list>
+  * It uses a config similar to apts <sources.list>
   * It's fully pool comply
   * It supports multithreaded downloading
   * It supports multiple architectures at the same time
