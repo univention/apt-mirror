@@ -1,17 +1,16 @@
 This package was debianized by Dmitry N. Hramtsov <hdn@nsu.ru> on
-Sat, 27 Jul 2002 12:44:33 +0700 
-and modified for Debian by Brandon Holtsclaw <brandon@imbrandon.com> on
+Sat, 27 Jul 2002 12:44:33 +0700
+and modified for Debian by Brandon Holtsclaw <me@brandonholtsclaw.com> on
 Mon, 10 Jul 2006 12:44:33 -0500.
 
 It was downloaded from http://apt-mirror.sourceforge.net/
 
-Copyright (C) 2005  Dmitry N. Hramstov <hdn@nsu.ru>
+Copyright 2005,2006,2007  Dmitry N. Hramstov <hdn@nsu.ru>
+Copyright 2007,2008,2009,2010  Brandon Holtsclaw <me@brandonholtsclaw.com>
 
-Upstream Author: 
+Upstream Authors:
 	Dmitry N. Hramtsov <hdn@nsu.ru>
-
-Copyright Holder: 
-	Dmitry N. Hramtsov <hdn@nsu.ru>
+	Brandon Holtsclaw <me@brandonholtsclaw.com>
 
 License:
 
@@ -30,4 +29,4 @@ License:
 	Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 
 On Debian systems, the complete text of the GNU General
-Public License can be found in `/usr/share/common-licenses/GPL'.
+Public License can be found in `/usr/share/common-licenses/GPL-2'.

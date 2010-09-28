@@ -1,0 +1,20 @@
+#!/bin/sh
+set -e
+
+purge_aptmirror_clean() {
+	if test -f /var/spool/apt-mirror/var/clean.sh; then
+		rm -f /var/spool/apt-mirror/var/clean.sh
+	fi
+	if test -f /var/spool/apt-mirror/var/postmirror.sh; then
+		rm -f /var/spool/apt-mirror/var/postmirror.sh
+	fi
+	if test -f /var/spool/apt-mirror/var/apt-mirror.lock; then
+		rm -f /var/spool/apt-mirror/var/apt-mirror.lock
+	fi
+}
+
+if test "$1" = "purge"; then
+	purge_aptmirror_clean
+fi
+
+#DEBHELPER#

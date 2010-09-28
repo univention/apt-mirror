@@ -23,19 +23,19 @@ Main features:
  * It can automatically remove unneeded files
  * It works well on overloaded channel to internet
  * It never produces an inconsistent mirror including while mirroring
- * It works on all POSIX complied systems with perl and wget
+ * It works on all POSIX compliant systems with perl and wget
 
 =head1 COMMENTS
 
 apt-mirror uses F</etc/apt/mirror.list> as a configuration file.
-By default it is tuned to official debian mirror in Finland. Change
+By default it is tuned to official Debian or Ubuntu mirrors. Change
 it for your needs.
 
 After you setup the configuration file you may run as root:
 
     # su - apt-mirror -c apt-mirror
 
-Or uncomment line in F</etc/cron.d/apt-mirror> to enable daily mirror upgrades.
+Or uncomment line in F</etc/cron.d/apt-mirror> to enable daily mirror updates.
 
 =head1 FILES
 
@@ -54,13 +54,31 @@ F</var/spool/apt-mirror/skel>
 F</var/spool/apt-mirror/var>
         Log files placed here. URLs and MD5 summs also here.
 
-=head1 KNOWN BUGS
+=head1 CONFIGURATION EXAMPLES
 
-Do not specify default http port (80) explicitly. (i.e. deb http://server:80/ sid ...)
+The mirror.list configuration supports many options, the file is well commented explinging each option.
+here are some sample mirror configuration lines showing the various supported ways :
 
-=head1 AUTHOR
+Normal:
+deb http://example.com/debian stable main contrib non-free
+
+Arch Specific: ( many other arch's are supported )
+deb-powerpc http://example.com/debian stable main contrib non-free
+
+HTTP and FTP Auth or non-standard port:
+deb http://user:pass@example.com:8080/debian stable main contrib non-free
+
+Source Mirroring:
+deb-src http://example.com/debian stable main contrib non-free
+
+=head1 ORIGINAL AUTHOR
 
 Dmitry N. Hramtsov E<lt>hdn@nsu.ruE<gt>
+
+=head1 CURRENT AUTHORS
+
+Dmitry N. Hramtsov E<lt>hdn@nsu.ruE<gt>
+Brandon Holtsclaw E<lt>me@brandonholtsclaw.comE<gt>
 
 =cut
 
@@ -81,7 +99,10 @@ my %config_variables = (
     "cleanscript" => '$var_path/clean.sh',
     "_contents"   => 1,
     "_autoclean"  => 0,
-    "_tilde"	  => 0
+    "_tilde"	  => 0,
+    "limit_rate"  => '100m',
+    "run_postmirror" => 1,
+    "postmirror_script" => '$var_path/postmirror.sh'
 );
 
 my @config_binaries = ();
@@ -156,6 +177,21 @@ sub get_variable {
     return $value;
 }
 
+sub lock_aptmirror {
+	system ("touch " . get_variable("var_path") . "/apt-mirror.lock");
+}
+
+sub check_lock {
+	if(-e get_variable("var_path") . "/apt-mirror.lock")
+	{
+		die("apt-mirror is already running, exiting");
+	}
+}
+
+sub unlock_aptmirror {
+	unlink(get_variable("var_path") . "/apt-mirror.lock");
+}
+
 sub download_urls {
     my $stage = shift;
     my @urls;
@@ -180,12 +216,9 @@ sub download_urls {
 	die("apt-mirror: can't do fork in download_urls") if $pid < 0;
 	
 	if($pid == 0) {
-#	    print " * Running wget $i...\n";
-	    exec 'wget', '-t', '0', '-r', '-N', '-l', 'inf', '-o', get_variable("var_path") . "/$stage-log.$i", '-i', get_variable("var_path") . "/$stage-urls.$i";
-#	    print " * Can't exec $i...\n";
-#	    unlink get_variable("var_path") . "/URLS.$i";
-#	    unlink get_variable("var_path") . "/wget-log.$i";
-#	    exit 1;
+	    exec 'wget', '--no-cache', '--limit-rate='.get_variable("limit_rate"), '-t', '5', '-r', '-N', '-l', 'inf', '-o', get_variable("var_path") . "/$stage-log.$i", '-i', get_variable("var_path") . "/$stage-urls.$i";
+	    # shouldn't reach this unless exec fails
+	    die("\n\nCould not run wget, please make sure its installed and in your path\n\n");
 	}
 	
 	push @childrens, $pid;
@@ -201,6 +234,14 @@ sub download_urls {
     print "\nEnd time: " . localtime() . "\n\n";
 }
 
+######################################################################################
+## Create the 3 needed directories if they don't exist yet
+my @needed_directories = (get_variable("mirror_path"), get_variable("skel_path"), get_variable("var_path"));
+foreach my $needed_directory (@needed_directories) {
+    unless (-d $needed_directory) {
+        mkdir($needed_directory) or die("apt-mirror: can't create $needed_directory directory");
+    }
+}
 
 ######################################################################################
 ## Parse config
@@ -254,6 +295,14 @@ close CONFIG;
 
 die("Please explicitly specify 'defaultarch' in mirror.list") unless get_variable("defaultarch");
 
+check_lock();
+
+$SIG{INT} = "unlock_aptmirror";
+$SIG{HUP} = "unlock_aptmirror";
+$SIG{TERM} = "unlock_aptmirror";
+
+lock_aptmirror();
+
 
 ######################################################################################
 ## Skel download
@@ -286,9 +335,13 @@ foreach (@config_sources) {
 	foreach (@components) {
 	    add_url_to_download($url . $_ . "/source/Release");
 	    add_url_to_download($url . $_ . "/source/Sources.gz");
+	    add_url_to_download($url . $_ . "/source/Sources.bz2");
 	}
     } else {
+    add_url_to_download($uri . "/$distribution/Release");
+	add_url_to_download($uri . "/$distribution/Release.gpg");
 	add_url_to_download($uri . "/$distribution/Sources.gz");
+	add_url_to_download($uri . "/$distribution/Sources.bz2");
     }
 }
 
@@ -300,13 +353,20 @@ foreach (@config_binaries) {
 
 	add_url_to_download($url . "Release");
 	add_url_to_download($url . "Release.gpg");
-	add_url_to_download($url . "Contents-" . $arch . ".gz") if get_variable("_contents");
+        if (get_variable("_contents")) {
+            add_url_to_download($url . "Contents-" . $arch . ".gz");
+            add_url_to_download($url . "Contents-" . $arch . ".bz2");
+        }
 	foreach (@components) {
 	    add_url_to_download($url . $_ . "/binary-" . $arch . "/Release");
 	    add_url_to_download($url . $_ . "/binary-" . $arch . "/Packages.gz");
+	    add_url_to_download($url . $_ . "/binary-" . $arch . "/Packages.bz2");
 	}
     } else {
+	add_url_to_download($uri . "/$distribution/Release");
+	add_url_to_download($uri . "/$distribution/Release.gpg");
 	add_url_to_download($uri . "/$distribution/Packages.gz");
+	add_url_to_download($uri . "/$distribution/Packages.bz2");
     }
 }
 
@@ -319,6 +379,7 @@ foreach (keys %urls_to_download) {
     s[~][%7E]g if get_variable("_tilde");
     $skipclean{$_} = 1;
     $skipclean{$_} = 1 if s[\.gz$][];
+    $skipclean{$_} = 1 if s[\.bz2$][];
 }
 
 ######################################################################################
@@ -364,14 +425,21 @@ sub remove_spaces($) {
     }
 }
 
+sub sanitise_uri {
+    my $uri = shift;
+    $uri =~ s[^(\w+)://][];
+    $uri =~ s/^([^@]+)?@?// if $uri =~ /@/;
+    $uri =~ s&:\d+/&/&; # and port information
+    $uri =~ s/~/\%7E/g if get_variable("_tilde");
+    return $uri;
+}
+
 sub proceed_index_gz {
     my $uri = shift;
     my $index = shift;
     my ($path, $package, $mirror, $files) = '';
 
-    $path = $uri;
-    $path =~ s[^(\w+)://][];
-    $path =~ s/~/\%7E/g if get_variable("_tilde");
+    $path = sanitise_uri($uri);
     local $/ = "\n\n";
     $mirror = get_variable("mirror_path") . "/" . $path;
     
@@ -386,6 +454,7 @@ sub proceed_index_gz {
 	chomp $package;
 	my (undef, %lines) = split(/^([\w\-]+:)/m, $package);
 
+	$lines{"Directory:"} = "" unless defined $lines{"Directory:"};
 	chomp(%lines);
 	remove_spaces(\%lines);
 
@@ -488,8 +557,9 @@ sub copy_file {
 
 foreach (@index_urls) {
     die("apt-mirror: invalid url in index_urls") unless s[^(\w+)://][];
-    copy_file(get_variable("skel_path") . "/$_", get_variable("mirror_path") . "/$_");
-    copy_file(get_variable("skel_path") . "/$_", get_variable("mirror_path") . "/$_") if(s/\.gz$//);
+    copy_file(get_variable("skel_path") . "/" . sanitise_uri("$_"), get_variable("mirror_path") . "/" . sanitise_uri("$_"));
+    copy_file(get_variable("skel_path") . "/" . sanitise_uri("$_"), get_variable("mirror_path") . "/" . sanitise_uri("$_")) if(s/\.gz$//);
+    copy_file(get_variable("skel_path") . "/" . sanitise_uri("$_"), get_variable("mirror_path") . "/" . sanitise_uri("$_")) if(s/\.bz2$//);
 }
 
 
@@ -507,8 +577,7 @@ sub process_file {
     my $file = shift;
     $file =~ s[~][%7E]g if get_variable("_tilde");
     return 1 if $skipclean{$file};
-    $file =~ s[%7E][~] if get_variable("_tilde");
-    push @rm_files, $file;
+    push @rm_files, sanitise_uri($file);
     my (undef, undef, undef, undef, undef, undef, undef, $size, undef, undef, undef, undef, $blocks) = stat($file);
     $unnecessary_bytes += $blocks * 512;
     return 0;
@@ -518,14 +587,14 @@ sub process_directory {
     my $dir = shift;
     my $is_needed = 0;
     return 1 if $skipclean{$dir};
-    opendir(DIR, $dir) or die "apt-mirror: can't opendir $dir: $!";
-    foreach (grep { !/^\.$/ && !/^\.\.$/ } readdir(DIR)) {
+    opendir(my $dir_h, $dir) or die "apt-mirror: can't opendir $dir: $!";
+    foreach (grep { !/^\.$/ && !/^\.\.$/ } readdir($dir_h)) {
 	my $item = $dir . "/". $_;
 	$is_needed |= process_directory($item)	if -d $item && ! -l $item;
 	$is_needed |= process_file($item)	if -f $item;
 	$is_needed |= process_symlink($item)	if -l $item;
     }
-    closedir DIR;
+    closedir $dir_h;
     push @rm_dirs, $dir unless $is_needed;
     return $is_needed;
 }
@@ -581,3 +650,16 @@ if(get_variable("_autoclean")) {
     close CLEAN;
 
 }
+
+if(get_variable("run_postmirror")) {
+    print "Running the Post Mirror script ...\n";
+    print "(" . get_variable("postmirror_script") . ")\n\n";
+    if(-x get_variable("postmirror_script")){
+        system (get_variable("postmirror_script"));        
+    } else {
+        system ('/bin/sh ' . get_variable("postmirror_script"));
+    }
+    print "\nPost Mirror script has completed. See above output for any possible errors.\n\n";
+}
+
+unlock_aptmirror();

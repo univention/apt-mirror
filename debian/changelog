@@ -1,3 +1,111 @@
+apt-mirror (0.4.8-3) unstable; urgency=low
+
+  * Bump Standards-Version to 3.9.1 (no changes required).
+  * Add a shebang line to clean.sh (LP: #649364).
+
+ -- Benjamin Drung <bdrung@ubuntu.com>  Tue, 28 Sep 2010 23:53:54 +0200
+
+apt-mirror (0.4.8-2) unstable; urgency=low
+
+  * Updated Standards-Version to 3.9.0
+  * debian/postrm: Clean-up auto-generated files on purge (Closes:
+    #455106)
+
+ -- Jeremy T. Bouse <jbouse@debian.org>  Sun, 18 Jul 2010 00:13:02 -0400
+
+apt-mirror (0.4.8-1) unstable; urgency=low
+
+  * New Upstream version 0.4.8
+  * Fixed email addresses in debian/copyright
+
+ -- Brandon Holtsclaw <me@brandonholtsclaw.com>  Sun, 02 May 2010 18:10:53 -0500
+
+apt-mirror (0.4.7-1) unstable; urgency=low
+
+  [ Brandon Holtsclaw ]
+  * New Upstream Release
+  * all patches applied upstream and fixes the following Debian bugs
+    (Closes: #457714, #484876, #387595, #483100, #570629, #576141, #570632)
+  * Updated debian/watch file
+
+  [ Jeremy T. Bouse ]
+  * Add git-buildpackage config file
+  * Initial run to clean existing lintian warnings
+
+  [ Benjamin Drung ]
+  * Drop cdbs and switch to dh 7.
+  * Switch to dpkg-source 3.0 (quilt) format.
+  * Add missing ${perl:Depends}.
+  * Add myself to uploaders.
+  * Restructure debian/postinst.
+  * Set codename on compile time.
+
+ -- Jeremy T. Bouse <jbouse@debian.org>  Mon, 19 Apr 2010 14:48:15 -0400
+
+apt-mirror (0.4.6-0ubuntu4) lucid; urgency=low
+
+  * Add 03-clean-lock-file.patch to delete the lock file on every exit
+    (LP: #424462).
+  * Update default config to mention lucid (LP: #551605).
+
+ -- Benjamin Drung <bdrung@ubuntu.com>  Thu, 15 Apr 2010 23:20:51 +0200
+
+apt-mirror (0.4.6-0ubuntu3) karmic; urgency=low
+
+  * Switch to cdbs and add simple-patchsys.
+  * Add patches again and refresh them:
+    - debian/patches/01-ubuntu-mirror-bz2.patch (LP: #184063)
+    - debian/patches/02-fix-invalid-dirhandle.patch (LP: #244613)
+  * Install upstream changelog.
+  * Refer to versioned copyright file.
+  * Bump Debian standards version to 3.8.3, no changes needed.
+
+ -- Benjamin Drung <bdrung@ubuntu.com>  Fri, 16 Oct 2009 16:29:23 +0200
+
+apt-mirror (0.4.6-0ubuntu2) karmic; urgency=low
+
+  * Readd dropped changelog entries.
+  * Reapply changes, which were dropped with 0.4.6-0ubuntu1:
+    - debian/Ubuntu-mirror.list: fix typo (privlages -> privileges)
+    - debian/rules: Move binary-arch commands to binary-indep
+    - debian/control:
+      - remove homepage from description
+      - Update Maintainer field
+  * debian/Debian-mirror.list: fix typo (privlages -> privileges)
+  * debian/Ubuntu-mirror.list: update distribution to karmic (LP: #378836)
+  * Remove dpatch (there is no patch to apply)
+
+ -- Benjamin Drung <bdrung@ubuntu.com>  Wed, 20 May 2009 11:41:34 +0200
+
+apt-mirror (0.4.6-0ubuntu1) karmic; urgency=low
+
+  * New Upstream Release
+  * updated debian/*-mirror.list to reflect new upsteam options
+  * added postmirror.sh creation and configuration options
+  * added file locking, more than one apt-mirror instance cant run at once
+
+ -- Brandon Holtsclaw <brandon@imbrandon.com>  Thu, 27 Dec 2007 01:55:18 -0600
+
+apt-mirror (0.4.5-1ubuntu2) jaunty; urgency=low
+
+  * Add 02-fix-invalid-dirhandle.dpatch (LP: #244613)
+  * debian/Ubuntu-mirror.list:
+    - fix typo (privlages -> privileges)
+    - update distribution to jaunty
+  * debian/rules: Move binary-arch commands to binary-indep
+  * debian/control:
+    - remove homepage from description
+    - bump Debian standards version to 3.8.0, no changes needed
+
+ -- Benjamin Drung <benjamin.drung@gmail.com>  Sat, 01 Nov 2008 20:41:20 +0100
+
+apt-mirror (0.4.5-1ubuntu1) intrepid; urgency=low
+
+  * Add 01-ubuntu-mirror-bz2.patch (LP: #184063)
+  * Bump Debian standards version to 3.7.3, no changes needed
+
+ -- David Futcher <bobbocanfly@gmail.com>  Thu, 27 Mar 2008 14:20:06 +0000
+
 apt-mirror (0.4.5-1) unstable; urgency=low
 
   * new upstream release
@@ -114,4 +222,3 @@ apt-mirror (0.3.0-1) unstable; urgency=low
   * Initial public release.
 
  -- Dmitry N. Hramtsov <hdn@nsu.ru>  Sat, 27 Jul 2002 12:44:33 +0700
-
