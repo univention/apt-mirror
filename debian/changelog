@@ -1,3 +1,25 @@
+apt-mirror (0.4.8-5) unstable; urgency=low
+
+  * Improve lock file handling to avoid false "apt-mirror is already running"
+    messages. Thanks to Ivan Borzenkov <ivan1986@list.ru>
+    (Closes: #589167, LP: #424462)
+  * Create directories after config is parsed.
+    Thanks to Rob Verduijn (Closes: #619353, LP: #727011)
+  * Support armhf, kfreebsd-* and s390x arch. (Closes: #644630)
+
+ -- Benjamin Drung <bdrung@debian.org>  Sat, 28 Jan 2012 14:27:12 +0100
+
+apt-mirror (0.4.8-4) unstable; urgency=low
+
+  [ Benjamin Drung ]
+  * Update my email address.
+
+  [ Jeremy T. Bouse ]
+  * Fix braindead build environments (closes: #634591)
+  * Update Standards-Version (no changes made)
+
+ -- Jeremy T. Bouse <jbouse@debian.org>  Sun, 24 Jul 2011 21:04:19 -0400
+
 apt-mirror (0.4.8-3) unstable; urgency=low
 
   * Bump Standards-Version to 3.9.1 (no changes required).

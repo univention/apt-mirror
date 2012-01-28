@@ -1,1 +1,4 @@
 shebang.patch
+additional_archs.patch
+create_dirs.patch
+lock.patch

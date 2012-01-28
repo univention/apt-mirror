@@ -1,0 +1,45 @@
+Description: Create directories after config is parsed
+ If the base_path isn't default, the directories needed will not be created.
+ Move the directory creation after the config parsing to facilitate creating
+ in non-default directories.
+Author: Rob Verduijn
+Bug-Debian: http://bugs.debian.org/619353
+Bug-Ubuntu: https://bugs.launchpad.net/bugs/727011
+
+--- a/apt-mirror
++++ b/apt-mirror
+@@ -234,16 +234,6 @@
+     print "\nEnd time: " . localtime() . "\n\n";
+ }
+ 
+-######################################################################################
+-## Create the 3 needed directories if they don't exist yet
+-my @needed_directories = (get_variable("mirror_path"), get_variable("skel_path"), get_variable("var_path"));
+-foreach my $needed_directory (@needed_directories) {
+-    unless (-d $needed_directory) {
+-        mkdir($needed_directory) or die("apt-mirror: can't create $needed_directory directory");
+-    }
+-}
+-
+-######################################################################################
+ ## Parse config
+ 
+ open CONFIG, "<$config_file" or die("apt-mirror: can't open config file ($config_file)");
+@@ -295,6 +285,17 @@
+ 
+ die("Please explicitly specify 'defaultarch' in mirror.list") unless get_variable("defaultarch");
+ 
++######################################################################################
++## Create the 3 needed directories if they don't exist yet
++my @needed_directories = (get_variable("mirror_path"), get_variable("skel_path"), get_variable("var_path"));
++foreach my $needed_directory (@needed_directories) {
++    unless (-d $needed_directory) {
++        mkdir($needed_directory) or die("apt-mirror: can't create $needed_directory directory");
++    }
++}
++#
++#######################################################################################
++
+ check_lock();
+ 
+ $SIG{INT} = "unlock_aptmirror";
