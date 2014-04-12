@@ -1,3 +1,43 @@
+apt-mirror (0.5.1-1) unstable; urgency=medium
+
+  * New upstream release.
+
+ -- Benjamin Drung <bdrung@debian.org>  Sat, 12 Apr 2014 21:35:44 +0200
+
+apt-mirror (0.5.0-1) unstable; urgency=medium
+
+  * New upstream release.
+    - Removed restrictions when parsing deb-$arch (LP: #913837)
+    - Download all provided translation files instead of trying to download
+      translation files based on a hard-coded language list. (Closes: #725762)
+    - Fix typos (Closes: #736904, LP: #1211097).
+    - Mirror Contents-*.gz for each component. (Closes: #647301)
+  * Use Makefile for installation.
+  * Bump Standards-Version to 3.9.5.
+
+ -- Benjamin Drung <bdrung@debian.org>  Sat, 22 Feb 2014 15:42:22 +0100
+
+apt-mirror (0.4.9-1) unstable; urgency=low
+
+  * New upstream release.
+  * Use current canonical URI for VCS-* fields.
+  * Update Homepage field and debian/watch file.
+  * Drop all patches (all accepted upstream).
+  * Bump Standards-Version to 3.9.4 (no changes needed).
+  * Switch to debhelper 9.
+  * Rewrite copyright in copyright-format 1.0.
+
+ -- Benjamin Drung <bdrung@debian.org>  Mon, 04 Mar 2013 23:40:50 +0100
+
+apt-mirror (0.4.8-6) unstable; urgency=low
+
+  * Fix regex problem: arm overrides armhf. Thanks to hawken. (Closes: #682395)
+  * Bump Standard-Version to 3.9.3 (no changes needed).
+  * Add support for HTTPS with basic HTTP authentication. Thanks to Pali
+    for the patch. (LP: #1015131)
+
+ -- Benjamin Drung <bdrung@debian.org>  Fri, 27 Jul 2012 00:51:30 +0200
+
 apt-mirror (0.4.8-5) unstable; urgency=low
 
   * Improve lock file handling to avoid false "apt-mirror is already running"

@@ -7,5 +7,5 @@ CODENAME ?= $(shell lsb_release -sc)
 	dh $@
 
 override_dh_auto_install:
+	dh_auto_install -- PREFIX=/usr
 	sed "s#@CODENAME@#$(CODENAME)#" debian/$(DIST)-mirror.list > debian/apt-mirror/etc/apt/mirror.list
-	pod2man apt-mirror > debian/apt-mirror/usr/share/man/man1/apt-mirror.1

@@ -1,2 +1,2 @@
 version=3
-http://apt-mirror.sf.net/apt-mirror/apt-mirror_(.*)\.orig\.tar\.gz
+https://github.com/apt-mirror/apt-mirror/releases/ .*/[A-Za-z-]*(\d[\d\.]*)\.tar\.(?:gz|bz2|xz)
