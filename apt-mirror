@@ -1047,7 +1047,7 @@ else
 my $perm = ( stat get_variable("cleanscript") )[2] & 07777;
 chmod( $perm | 0111, get_variable("cleanscript") );
 
-if ( get_variable("run_postmirror") )
+if ( get_variable("run_postmirror") && -f get_variable("run_postmirror") )
 {
     print "Running the Post Mirror script ...\n";
     print "(" . get_variable("postmirror_script") . ")\n\n";
