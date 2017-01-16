@@ -263,7 +263,7 @@ sub download_urls
 
         if ( $pid == 0 )
         {
-            exec 'wget', '--no-cache', '--limit-rate=' . get_variable("limit_rate"), '-t', '5', '-r', '-N', '-l', 'inf', '-o', get_variable("var_path") . "/$stage-log.$i", '-i', get_variable("var_path") . "/$stage-urls.$i", @args;
+            exec 'wget', '--no-host-directories', '--no-cache', '--limit-rate=' . get_variable("limit_rate"), '-t', '5', '-r', '-N', '-l', 'inf', '-o', get_variable("var_path") . "/$stage-log.$i", '-i', get_variable("var_path") . "/$stage-urls.$i", @args;
 
             # shouldn't reach this unless exec fails
             die("\n\nCould not run wget, please make sure its installed and in your path\n\n");
@@ -336,7 +336,7 @@ while (<CONFIG>)
         next;
     } elsif ( $config_line{'type'} =~ /(skip-clean|clean)/ ) {
         my $link = $config_line{'uri'};
-        $link =~ s[^(\w+)://][];
+        $link =~ s{^\w+://[^/]+/}{};
         $link =~ s[/$][];
         $link =~ s[~][%7E]g if get_variable("_tilde");
         if ( $config_line{'type'} eq "skip-clean" ) {
@@ -467,7 +467,7 @@ download_urls( "index", @index_urls );
 
 foreach ( keys %urls_to_download )
 {
-    s[^(\w+)://][];
+    s{^\w+://[^/]+/}{};
     s[~][%7E]g if get_variable("_tilde");
     $skipclean{$_} = 1;
     $skipclean{$_} = 1 if s[\.gz$][];
@@ -483,9 +483,7 @@ foreach ( keys %urls_to_download )
 sub sanitise_uri
 {
     my $uri = shift;
-    $uri =~ s[^(\w+)://][];
-    $uri =~ s/^([^@]+)?@?// if $uri =~ /@/;
-    $uri =~ s&:\d+/&/&;                       # and port information
+    $uri =~ s{^\w+://[^/]+/}{};
     $uri =~ s/~/\%7E/g if get_variable("_tilde");
     return $uri;
 }
@@ -625,7 +623,7 @@ download_urls( "translation", sort keys %urls_to_download );
 
 foreach ( keys %urls_to_download )
 {
-    s[^(\w+)://][];
+    s{^\w+://[^/]+/}{};
     s[~][%7E]g if get_variable("_tilde");
     $skipclean{$_} = 1;
 }
@@ -935,7 +933,7 @@ sub copy_file
 
 foreach (@index_urls)
 {
-    die("apt-mirror: invalid url in index_urls") unless s[^(\w+)://][];
+    die("apt-mirror: invalid url in index_urls") unless s{^\w+://[^/]+/}{};
     copy_file( get_variable("skel_path") . "/" . sanitise_uri("$_"), get_variable("mirror_path") . "/" . sanitise_uri("$_") );
     copy_file( get_variable("skel_path") . "/" . sanitise_uri("$_"), get_variable("mirror_path") . "/" . sanitise_uri("$_") ) if (s/\.gz$//);
     copy_file( get_variable("skel_path") . "/" . sanitise_uri("$_"), get_variable("mirror_path") . "/" . sanitise_uri("$_") ) if (s/\.bz2$//);
