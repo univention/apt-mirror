@@ -958,6 +958,8 @@ sub process_file
     my $file = shift;
     $file =~ s[~][%7E]g if get_variable("_tilde");
     return 1 if $skipclean{remove_double_slashes($file)};
+    return 1 if $file =~ /\/(?:pre|post)up\.sh(?:\.gpg)?$/;
+    return 1 if $file =~ /\/releases.json$/;
     push @rm_files, $file;
     my ( undef, undef, undef, undef, undef, undef, undef, $size, undef, undef, undef, undef, $blocks ) = stat($file);
     $unnecessary_bytes += $blocks * 512;
