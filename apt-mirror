@@ -91,14 +91,14 @@ use warnings;
 use strict;
 use File::Copy;
 use File::Compare;
-use File::Path;
+use File::Path qw(make_path);
 use File::Basename;
 use Fcntl qw(:flock);
 
 my $config_file;
 
 my %config_variables = (
-    "defaultarch" => `dpkg --print-installation-architecture 2>/dev/null` || 'i386',
+    "defaultarch" => `dpkg --print-architecture 2>/dev/null` || 'i386',
     "nthreads"    => 20,
     "base_path"   => '/var/spool/apt-mirror',
     "mirror_path" => '$base_path/mirror',
@@ -116,6 +116,7 @@ my %config_variables = (
     "postmirror_script"    => '$var_path/postmirror.sh',
     "use_proxy"            => 'off',
     "http_proxy"           => '',
+    "https_proxy"          => '',
     "proxy_user"           => '',
     "proxy_password"       => ''
 );
@@ -134,7 +135,7 @@ my %clean_directory = ();
 $config_file = "/etc/apt/mirror.list";    # Default value
 if ( $_ = shift )
 {
-    die("apt-mirror: invalid config file specified") unless -f $_;
+    die("apt-mirror: invalid config file specified") unless -e $_;
     $config_file = $_;
 }
 
@@ -200,6 +201,13 @@ sub get_variable
     return $value;
 }
 
+sub quoted_path
+{
+    my $path = shift;
+    $path =~ s/'/'\\''/g;
+    return "'" . $path . "'";
+}
+
 sub lock_aptmirror
 {
     open( LOCK_FILE, '>', get_variable("var_path") . "/apt-mirror.lock" );
@@ -234,7 +242,9 @@ sub download_urls
     if ( get_variable("unlink") == 1 )               { push( @args, "--unlink" ); }
     if ( length( get_variable("use_proxy") ) && ( get_variable("use_proxy") eq 'yes' || get_variable("use_proxy") eq 'on' ) )
     {
-        if ( length( get_variable("http_proxy") ) ) { push( @args, "-e use_proxy=yes" ); push( @args, "-e http_proxy=" . get_variable("http_proxy") ); }
+        if ( length( get_variable("http_proxy") ) || length( get_variable("https_proxy") ) ) { push( @args, "-e use_proxy=yes" ); }
+        if ( length( get_variable("http_proxy") ) ) { push( @args, "-e http_proxy=" . get_variable("http_proxy") ); }
+        if ( length( get_variable("https_proxy") ) ) { push( @args, "-e https_proxy=" . get_variable("https_proxy") ); }
         if ( length( get_variable("proxy_user") ) ) { push( @args, "-e proxy_user=" . get_variable("proxy_user") ); }
         if ( length( get_variable("proxy_password") ) ) { push( @args, "-e proxy_password=" . get_variable("proxy_password") ); }
     }
@@ -249,7 +259,7 @@ sub download_urls
 
         $pid = fork();
 
-        die("apt-mirror: can't do fork in download_urls") if $pid < 0;
+        die("apt-mirror: can't do fork in download_urls") if !defined($pid);
 
         if ( $pid == 0 )
         {
@@ -276,57 +286,68 @@ sub download_urls
 
 ## Parse config
 
+sub parse_config_line
+{
+    my $pattern_deb_line = qr/^[\t ]*(?<type>deb-src|deb)(?:-(?<arch>[\w\-]+))?[\t ]+(?:\[(?<options>[^\]]+)\][\t ]+)?(?<uri>[^\s]+)[\t ]+(?<components>.+)$/;
+    my $line = $_;
+    my %config;
+    if ( $line =~ $pattern_deb_line ) {
+        $config{'type'} = $+{type};
+        $config{'arch'} = $+{arch};
+        $config{'options'} = $+{options} ? $+{options} : "";
+        $config{'uri'} = $+{uri};
+        $config{'components'} = $+{components};
+        if ( $config{'options'} =~ /arch=((?<arch>[\w\-]+)[,]*)/g ) {
+            $config{'arch'} = $+{arch};
+        }
+        $config{'components'} = [ split /\s+/, $config{'components'} ];
+    } elsif ( $line =~ /set[\t ]+(?<key>[^\s]+)[\t ]+(?<value>"[^"]+"|'[^']+'|[^\s]+)/ ) {
+        $config{'type'} = 'set';
+        $config{'key'} = $+{key};
+        $config{'value'} = $+{value};
+        $config{'value'} =~ s/^'(.*)'$/$1/;
+        $config{'value'} =~ s/^"(.*)"$/$1/;
+    } elsif ( $line =~ /(?<type>clean|skip-clean)[\t ]+(?<uri>[^\s]+)/ ) {
+        $config{'type'} = $+{type};
+        $config{'uri'} = $+{uri};
+    }
+
+    return %config;
+}
+
 open CONFIG, "<$config_file" or die("apt-mirror: can't open config file ($config_file)");
 while (<CONFIG>)
 {
     next if /^\s*#/;
     next unless /\S/;
-    my @config_line = split;
-    my $config_line = shift @config_line;
+    my $line = $_;
+    my %config_line = parse_config_line;
 
-    if ( $config_line eq "set" )
-    {
-        $config_variables{ $config_line[0] } = $config_line[1];
+    if ( $config_line{'type'} eq "set" ) {
+        $config_variables{ $config_line{'key'} } = $config_line{'value'};
+        next;
+    } elsif ( $config_line{'type'} eq "deb" ) {
+        my $arch = $config_line{'arch'};
+        $arch = get_variable("defaultarch") if ! defined $config_line{'arch'};
+        push @config_binaries, [ $arch, $config_line{'uri'}, @{$config_line{'components'}} ];
+        next;
+    } elsif ( $config_line{'type'} eq "deb-src" ) {
+        push @config_sources, [ $config_line{'uri'}, @{$config_line{'components'}} ];
+        next;
+    } elsif ( $config_line{'type'} =~ /(skip-clean|clean)/ ) {
+        my $link = $config_line{'uri'};
+        $link =~ s[^(\w+)://][];
+        $link =~ s[/$][];
+        $link =~ s[~][%7E]g if get_variable("_tilde");
+        if ( $config_line{'type'} eq "skip-clean" ) {
+            $skipclean{ $link } = 1;
+        } elsif ( $config_line{'type'} eq "clean" ) {
+            $clean_directory{ $link } = 1;
+        }
         next;
     }
 
-    if ( $config_line eq "deb" )
-    {
-        push @config_binaries, [ get_variable("defaultarch"), @config_line ];
-        next;
-    }
-
-    if ( $config_line eq "deb-src" )
-    {
-        push @config_sources, [@config_line];
-        next;
-    }
-
-    if ( $config_line =~ /deb-([\w\-]+)/ )
-    {
-        push @config_binaries, [ $1, @config_line ];
-        next;
-    }
-
-    if ( $config_line eq "skip-clean" )
-    {
-        $config_line[0] =~ s[^(\w+)://][];
-        $config_line[0] =~ s[/$][];
-        $config_line[0] =~ s[~][%7E]g if get_variable("_tilde");
-        $skipclean{ $config_line[0] } = 1;
-        next;
-    }
-
-    if ( $config_line eq "clean" )
-    {
-        $config_line[0] =~ s[^(\w+)://][];
-        $config_line[0] =~ s[/$][];
-        $config_line[0] =~ s[~][%7E]g if get_variable("_tilde");
-        $clean_directory{ $config_line[0] } = 1;
-        next;
-    }
-
-    die("apt-mirror: invalid line in config file ($.: $config_line ...)");
+    die("apt-mirror: invalid line in config file ($.: $line ...)");
 }
 close CONFIG;
 
@@ -339,7 +360,7 @@ foreach my $needed_directory (@needed_directories)
 {
     unless ( -d $needed_directory )
     {
-        mkdir($needed_directory) or die("apt-mirror: can't create $needed_directory directory");
+        make_path($needed_directory) or die("apt-mirror: can't create $needed_directory directory");
     }
 }
 #
@@ -579,7 +600,7 @@ sub process_translation_index
     close STREAM;
 }
 
-print "Processing tranlation indexes: [";
+print "Processing translation indexes: [";
 
 foreach (@config_binaries)
 {
@@ -610,6 +631,97 @@ foreach ( keys %urls_to_download )
 }
 
 ######################################################################################
+## DEP-11 index download
+
+%urls_to_download = ();
+
+sub find_dep11_files_in_release
+{
+    # Look in the dists/$DIST/Release file for the DEP-11 files that belong
+    # to the given component and architecture.
+
+    my $dist_uri  = shift;
+    my $component = shift;
+    my $arch      = shift;
+    my ( $release_uri, $release_path, $line ) = '';
+
+    $release_uri  = $dist_uri . "Release";
+    $release_path = get_variable("skel_path") . "/" . sanitise_uri($release_uri);
+
+    unless ( open STREAM, "<$release_path" )
+    {
+        warn( "Failed to open Release file from " . $release_uri );
+        return;
+    }
+
+    my $checksums = 0;
+    while ( $line = <STREAM> )
+    {
+        chomp $line;
+        if ($checksums)
+        {
+            if ( $line =~ /^ +(.*)$/ )
+            {
+                my @parts = split( / +/, $1 );
+                if ( @parts == 3 )
+                {
+                    my ( $sha1, $size, $filename ) = @parts;
+                    if ( $filename =~ m{^$component/dep11/(Components-${arch}\.yml|icons-[^./]+\.tar)\.(gz|bz2|xz)$} )
+                    {
+                        add_url_to_download( $dist_uri . $filename, $size );
+                    }
+                }
+                else
+                {
+                    warn("Malformed checksum line \"$1\" in $release_uri");
+                }
+            }
+            else
+            {
+                $checksums = 0;
+            }
+        }
+        if ( not $checksums )
+        {
+            if ( $line eq "SHA256:" )
+            {
+                $checksums = 1;
+            }
+        }
+    }
+}
+
+print "Processing DEP-11 indexes: [";
+
+foreach (@config_binaries)
+{
+    my ( $arch, $uri, $distribution, @components ) = @{$_};
+    print "D";
+    if (@components)
+    {
+        $url = $uri . "/dists/" . $distribution . "/";
+
+        my $component;
+        foreach $component (@components)
+        {
+            find_dep11_files_in_release( $url, $component, $arch );
+        }
+    }
+}
+
+print "]\n\n";
+
+push( @index_urls, sort keys %urls_to_download );
+download_urls( "dep11", sort keys %urls_to_download );
+
+foreach ( keys %urls_to_download )
+{
+    s[^(\w+)://][];
+    s[~][%7E]g if get_variable("_tilde");
+    $skipclean{$_} = 1;
+}
+
+######################################################################################
 ## Main download preparations
 
 %urls_to_download = ();
@@ -617,6 +729,8 @@ foreach ( keys %urls_to_download )
 open FILES_ALL, ">" . get_variable("var_path") . "/ALL" or die("apt-mirror: can't write to intermediate file (ALL)");
 open FILES_NEW, ">" . get_variable("var_path") . "/NEW" or die("apt-mirror: can't write to intermediate file (NEW)");
 open FILES_MD5, ">" . get_variable("var_path") . "/MD5" or die("apt-mirror: can't write to intermediate file (MD5)");
+open FILES_SHA1, ">" . get_variable("var_path") . "/SHA1" or die("apt-mirror: can't write to intermediate file (SHA1)");
+open FILES_SHA256, ">" . get_variable("var_path") . "/SHA256" or die("apt-mirror: can't write to intermediate file (SHA256)");
 
 my %stat_cache = ();
 
@@ -658,7 +772,7 @@ sub remove_spaces($)
     }
 }
 
-sub process_index_gz
+sub process_index
 {
     my $uri   = shift;
     my $index = shift;
@@ -668,14 +782,22 @@ sub process_index_gz
     local $/ = "\n\n";
     $mirror = get_variable("mirror_path") . "/" . $path;
 
-    if ( $index =~ s/\.gz$// )
+    if (-e "$path/$index.gz" )
     {
         system("gunzip < $path/$index.gz > $path/$index");
+    }
+    elsif (-e "$path/$index.xz" )
+    {
+        system("xz -d < $path/$index.xz > $path/$index");
+    }
+    elsif (-e "$path/$index.bz2" )
+    {
+        system("bzip2 -d < $path/$index.bz2 > $path/$index");
     }
 
     unless ( open STREAM, "<$path/$index" )
     {
-        warn("apt-mirror: can't open index in process_index_gz");
+        warn("apt-mirror: can't open index $path/$index in process_index");
         return;
     }
 
@@ -693,7 +815,9 @@ sub process_index_gz
         {    # Packages index
             $skipclean{ remove_double_slashes( $path . "/" . $lines{"Filename:"} ) } = 1;
             print FILES_ALL remove_double_slashes( $path . "/" . $lines{"Filename:"} ) . "\n";
-            print FILES_MD5 $lines{"MD5sum:"} . "  " . remove_double_slashes( $path . "/" . $lines{"Filename:"} ) . "\n";
+            print FILES_MD5 $lines{"MD5sum:"} . "  " . remove_double_slashes( $path . "/" . $lines{"Filename:"} ) . "\n" if defined $lines{"MD5sum:"};
+            print FILES_SHA1 $lines{"SHA1:"} . "  " . remove_double_slashes( $path . "/" . $lines{"Filename:"} ) . "\n" if defined $lines{"SHA1:"};
+            print FILES_SHA256 $lines{"SHA256:"} . "  " . remove_double_slashes( $path . "/" . $lines{"Filename:"} ) . "\n" if defined $lines{"SHA256:"};
             if ( need_update( $mirror . "/" . $lines{"Filename:"}, $lines{"Size:"} ) )
             {
                 print FILES_NEW remove_double_slashes( $uri . "/" . $lines{"Filename:"} ) . "\n";
@@ -733,12 +857,12 @@ foreach (@config_sources)
         my $component;
         foreach $component (@components)
         {
-            process_index_gz( $uri, "/dists/$distribution/$component/source/Sources.gz" );
+            process_index( $uri, "/dists/$distribution/$component/source/Sources" );
         }
     }
     else
     {
-        process_index_gz( $uri, "/$distribution/Sources.gz" );
+        process_index( $uri, "/$distribution/Sources" );
     }
 }
 
@@ -751,12 +875,12 @@ foreach (@config_binaries)
         my $component;
         foreach $component (@components)
         {
-            process_index_gz( $uri, "/dists/$distribution/$component/binary-$arch/Packages.gz" );
+            process_index( $uri, "/dists/$distribution/$component/binary-$arch/Packages" );
         }
     }
     else
     {
-        process_index_gz( $uri, "/$distribution/Packages.gz" );
+        process_index( $uri, "/$distribution/Packages" );
     }
 }
 
@@ -767,6 +891,8 @@ print "]\n\n";
 close FILES_ALL;
 close FILES_NEW;
 close FILES_MD5;
+close FILES_SHA1;
+close FILES_SHA256;
 
 ######################################################################################
 ## Main download
@@ -793,7 +919,7 @@ sub copy_file
     my ( $from, $to ) = @_;
     my $dir = dirname($to);
     return unless -f $from;
-    mkpath($dir) unless -d $dir;
+    make_path($dir) unless -d $dir;
     if ( get_variable("unlink") == 1 )
     {
         if ( compare( $from, $to ) != 0 ) { unlink($to); }
@@ -888,7 +1014,7 @@ else
 
     print CLEAN "#!/bin/sh\n";
     print CLEAN "set -e\n\n";
-    print CLEAN "cd " . get_variable("mirror_path") . "\n\n";
+    print CLEAN "cd " . quoted_path(get_variable("mirror_path")) . "\n\n";
     print CLEAN "echo 'Removing $total unnecessary files [$size_output]...'\n";
     foreach (@rm_files)
     {
@@ -927,11 +1053,11 @@ if ( get_variable("run_postmirror") )
     print "(" . get_variable("postmirror_script") . ")\n\n";
     if ( -x get_variable("postmirror_script") )
     {
-        system( get_variable("postmirror_script") );
+        system( get_variable("postmirror_script"), '' );
     }
     else
     {
-        system( '/bin/sh ' . get_variable("postmirror_script") );
+        system( '/bin/sh', get_variable("postmirror_script") );
     }
     print "\nPost Mirror script has completed. See above output for any possible errors.\n\n";
 }

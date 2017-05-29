@@ -1,3 +1,38 @@
+apt-mirror (0.5.4-1) unstable; urgency=medium
+
+  * New upstream bug-fix release.
+    - Fix use of uninitialized value $config{"options"} warning
+      (Closes: #851979, #859601)
+    - Fix warning on repository without md5sum
+    - Write SHA1 and SHA256 in addition to MD5
+    - Also download xz-compressed Components-$arch.yml.xz
+
+ -- Benjamin Drung <bdrung@debian.org>  Mon, 29 May 2017 14:02:33 +0200
+
+apt-mirror (0.5.3-1) unstable; urgency=medium
+
+  * New upstream release.
+    - Add support for 'deb [arch=amd64] ...' format
+    - Create directories including their parents
+    - Add support for quoted variables with spaces
+
+ -- Benjamin Drung <bdrung@debian.org>  Fri, 06 Jan 2017 17:46:06 +0100
+
+apt-mirror (0.5.2-1) unstable; urgency=medium
+
+  * New upstream release.
+    - Fix spelling tranlation -> translation (Closes: #756035, LP: #1455522)
+    - Replace obsolete dpkg option '--print-installation-architecture'
+      by '--print-architecture' (Closes: #834106)
+    - Download DEP-11 files in component/dep11 directories (LP: #1550852)
+    - Support non-existing .gz index files (Closes: #819974)
+    - Just test that config file is readable (Closes: #824493)
+  * Drop indirect dependency perl-modules
+  * Bump Standards-Version to 3.9.8 (no changes needed)
+  * Use secure HTTPS for git URIs
+
+ -- Benjamin Drung <bdrung@debian.org>  Wed, 09 Nov 2016 13:02:06 +0100
+
 apt-mirror (0.5.1-1) unstable; urgency=medium
 
   * New upstream release.
