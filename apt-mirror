@@ -1042,15 +1042,16 @@ chmod( $perm | 0111, get_variable("cleanscript") );
 
 if ( get_variable("run_postmirror") && -f get_variable("run_postmirror") )
 {
+    my $postscript = get_variable("postmirror_script");
     print "Running the Post Mirror script ...\n";
-    print "(" . get_variable("postmirror_script") . ")\n\n";
-    if ( -x get_variable("postmirror_script") )
+    print "(" . $postscript . ")\n\n";
+    if ( -x $postscript )
     {
-        system( get_variable("postmirror_script"), '' );
+        system( $postscript, '' );
     }
-    else
+    elsif ( -f $postscript )
     {
-        system( '/bin/sh', get_variable("postmirror_script") );
+        system( '/bin/sh', $postscript );
     }
     print "\nPost Mirror script has completed. See above output for any possible errors.\n\n";
 }
