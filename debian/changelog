@@ -1,0 +1,57 @@
+apt-mirror (0.4.4-2) unstable; urgency=low
+
+  * Bugfix: default architecture identification on non-debian systems v2
+
+ -- Dmitry N. Hramtsov <hdn@nsu.ru>  Tue, 11 Oct 2005 15:33:27 +0700
+
+apt-mirror (0.4.4-1) unstable; urgency=low
+
+  * Bugfix: default architecture identification on non-debian systems
+  * New architectures added: amd64, hurd-i386, sh
+  * New configuration options
+
+ -- Dmitry N. Hramtsov <hdn@nsu.ru>  Sat,  8 Oct 2005 15:33:27 +0700
+
+apt-mirror (0.4.3-2) unstable; urgency=low
+
+  * Minor fixes in cleanup section
+
+ -- Dmitry N. Hramtsov <hdn@nsu.ru>  Sat, 20 Jul 2003 13:24:01 +0700
+
+apt-mirror (0.4.3-1) unstable; urgency=low
+
+  * Fixes in ports processing
+
+ -- Dmitry N. Hramtsov <hdn@nsu.ru>  Sat,  8 Jul 2003 13:35:19 +0700
+
+apt-mirror (0.4.3-0) unstable; urgency=low
+
+  * Fixes allows "~" usage in sources URLs
+
+ -- Dmitry N. Hramtsov <hdn@nsu.ru>  Sat,  7 Jul 2003 16:27:29 +0700
+
+apt-mirror (0.4.2-0) unstable; urgency=low
+
+  * Fixes allows explicitly specify port in sources URLs
+
+ -- Dmitry N. Hramtsov <hdn@nsu.ru>  Sat,  5 Jul 2003 16:32:59 +0700
+
+apt-mirror (0.4.1-0) unstable; urgency=low
+
+  * Improvements in cleanup code
+  * Small bugfixes in index parser
+
+ -- Dmitry N. Hramtsov <hdn@nsu.ru>  Sun, 29 Jun 2003 19:44:30 +0700
+
+apt-mirror (0.3.0-2) unstable; urgency=low
+
+  * Small bugfixes
+
+ -- Dmitry N. Hramtsov <hdn@nsu.ru>  Mon,  5 Aug 2002 16:26:30 +0700
+
+apt-mirror (0.3.0-1) unstable; urgency=low
+
+  * Initial public release.
+
+ -- Dmitry N. Hramtsov <hdn@nsu.ru>  Sat, 27 Jul 2002 12:44:33 +0700
+

@@ -1,0 +1,23 @@
+Source: apt-mirror
+Section: net
+Priority: optional
+Maintainer: Dmitry N. Hramtsov <hdn@nsu.ru>
+Build-Depends-Indep: debhelper (>> 3.0.0)
+Standards-Version: 3.5.2
+
+Package: apt-mirror
+Architecture: all
+Depends: wget, perl, perl-modules
+Description: APT sources mirroring tool
+ A small and efficient tool that provides ability to mirror any parts (or even all)
+ of Debian GNU/Linux distribution or any other apt sources which often provided
+ by debian developers.
+ .
+ Projects main goals:
+  * It takes config similar to apt's "sources.list"
+  * It is fully pool comply
+  * It supports multithreaded downloading
+  * It supports multiple architectures at the same time
+  * It can automatically remove unneeded files 
+  * It successfully works on overloaded channel to internet 
+  * It never makes inconsistent mirror including while mirroring 
