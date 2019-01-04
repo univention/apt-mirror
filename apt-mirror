@@ -379,7 +379,7 @@ sub remove_double_slashes
     local $_ = shift;
     while (s[/\./][/]g)                { }
     while (s[(?<!:)//][/]g)            { }
-    while (s[(?<!:/)/[^/]+/\.\./][/]g) { }
+    while (s[(^|(?<!:/)/)[^/]+/\.\./][$1]g) { }
     s/~/\%7E/g if get_variable("_tilde");
     return $_;
 }
