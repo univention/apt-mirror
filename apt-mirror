@@ -405,7 +405,6 @@ foreach (@config_sources)
         {
             add_url_to_download( $url . $_ . "/source/Release" );
             add_url_to_download( $url . $_ . "/source/Sources.gz" );
-            add_url_to_download( $url . $_ . "/source/Sources.bz2" );
             add_url_to_download( $url . $_ . "/source/Sources.xz" );
         }
     }
@@ -414,7 +413,6 @@ foreach (@config_sources)
         add_url_to_download( $uri . "/$distribution/Release" );
         add_url_to_download( $uri . "/$distribution/Release.gpg" );
         add_url_to_download( $uri . "/$distribution/Sources.gz" );
-        add_url_to_download( $uri . "/$distribution/Sources.bz2" );
         add_url_to_download( $uri . "/$distribution/Sources.xz" );
     }
 }
@@ -433,7 +431,6 @@ foreach (@config_binaries)
         if ( get_variable("_contents") )
         {
             add_url_to_download( $url . "Contents-" . $arch . ".gz" );
-            add_url_to_download( $url . "Contents-" . $arch . ".bz2" );
             add_url_to_download( $url . "Contents-" . $arch . ".xz" );
         }
         foreach (@components)
@@ -441,12 +438,10 @@ foreach (@config_binaries)
             if ( get_variable("_contents") )
             {
                 add_url_to_download( $url . $_ . "/Contents-" . $arch . ".gz" );
-                add_url_to_download( $url . $_ . "/Contents-" . $arch . ".bz2" );
                 add_url_to_download( $url . $_ . "/Contents-" . $arch . ".xz" );
             }
             add_url_to_download( $url . $_ . "/binary-" . $arch . "/Release" );
             add_url_to_download( $url . $_ . "/binary-" . $arch . "/Packages.gz" );
-            add_url_to_download( $url . $_ . "/binary-" . $arch . "/Packages.bz2" );
             add_url_to_download( $url . $_ . "/binary-" . $arch . "/Packages.xz" );
             add_url_to_download( $url . $_ . "/i18n/Index" );
         }
@@ -456,7 +451,6 @@ foreach (@config_binaries)
         add_url_to_download( $uri . "/$distribution/Release" );
         add_url_to_download( $uri . "/$distribution/Release.gpg" );
         add_url_to_download( $uri . "/$distribution/Packages.gz" );
-        add_url_to_download( $uri . "/$distribution/Packages.bz2" );
         add_url_to_download( $uri . "/$distribution/Packages.xz" );
     }
 }
@@ -471,7 +465,6 @@ foreach ( keys %urls_to_download )
     s[~][%7E]g if get_variable("_tilde");
     $skipclean{$_} = 1;
     $skipclean{$_} = 1 if s[\.gz$][];
-    $skipclean{$_} = 1 if s[\.bz2$][];
     $skipclean{$_} = 1 if s[\.xz$][];
 }
 
