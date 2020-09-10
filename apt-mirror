@@ -284,6 +284,27 @@ sub download_urls
     print "\nEnd time: " . localtime() . "\n\n";
 }
 
+## utils
+
+sub remove_double_slashes
+{
+    local $_ = shift;
+    while (s[(^|/)\./][$1]g) { }
+    while (s[(?<!:)//][/]g) { }
+    while (s[(^|(?<!:/)/)[^/]+/\.\./][$1]g) { }
+    s/~/\%7E/g if get_variable("_tilde");
+    s{^/+}{};
+    return $_;
+}
+
+sub sanitise_uri
+{
+    my $uri = shift;
+    $uri =~ s{^\w+://[^/]+/}{};
+    $uri = remove_double_slashes($uri);
+    return $uri;
+}
+
 ## Parse config
 
 sub parse_config_line
@@ -336,9 +357,8 @@ while (<CONFIG>)
         next;
     } elsif ( $config_line{'type'} =~ /(skip-clean|clean)/ ) {
         my $link = $config_line{'uri'};
-        $link =~ s{^\w+://[^/]+/}{};
-        $link =~ s[/$][];
-        $link =~ s[~][%7E]g if get_variable("_tilde");
+        $link = sanitise_uri($link);
+        $link = '.' if ($link eq '');
         if ( $config_line{'type'} eq "skip-clean" ) {
             $skipclean{ $link } = 1;
         } elsif ( $config_line{'type'} eq "clean" ) {
@@ -373,16 +393,6 @@ lock_aptmirror();
 
 my %urls_to_download = ();
 my ( $url, $arch );
-
-sub remove_double_slashes
-{
-    local $_ = shift;
-    while (s[/\./][/]g)                { }
-    while (s[(?<!:)//][/]g)            { }
-    while (s[(^|(?<!:/)/)[^/]+/\.\./][$1]g) { }
-    s/~/\%7E/g if get_variable("_tilde");
-    return $_;
-}
 
 sub add_url_to_download
 {
@@ -472,14 +482,6 @@ foreach ( keys %urls_to_download )
 ## Translation index download
 
 %urls_to_download = ();
-
-sub sanitise_uri
-{
-    my $uri = shift;
-    $uri =~ s{^\w+://[^/]+/}{};
-    $uri =~ s/~/\%7E/g if get_variable("_tilde");
-    return $uri;
-}
 
 sub find_translation_files_in_release
 {
@@ -771,24 +773,25 @@ sub process_index
 
     $path = sanitise_uri($uri);
     local $/ = "\n\n";
+    my $index_path = get_variable("skel_path") . "/" . $path . "/" . $index;
     $mirror = get_variable("mirror_path") . "/" . $path;
 
-    if (-e "$path/$index.gz" )
+    if (-e "$index_path.gz" )
     {
-        system("gunzip < $path/$index.gz > $path/$index");
+        system("gunzip < $index_path.gz > $index_path");
     }
-    elsif (-e "$path/$index.xz" )
+    elsif (-e "$index_path.xz" )
     {
-        system("xz -d < $path/$index.xz > $path/$index");
+        system("xz -d < $index_path.xz > $index_path");
     }
-    elsif (-e "$path/$index.bz2" )
+    elsif (-e "$index_path.bz2" )
     {
-        system("bzip2 -d < $path/$index.bz2 > $path/$index");
+        system("bzip2 -d < $index_path.bz2 > $index_path");
     }
 
-    unless ( open STREAM, "<$path/$index" )
+    unless ( open STREAM, "<$index_path" )
     {
-        warn("apt-mirror: can't open index $path/$index in process_index");
+        warn("apt-mirror: can't open index $index_path in process_index");
         return;
     }
 
