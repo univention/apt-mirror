@@ -776,22 +776,37 @@ sub process_index
     my $index_path = get_variable("skel_path") . "/" . $path . "/" . $index;
     $mirror = get_variable("mirror_path") . "/" . $path;
 
-    if (-e "$index_path.gz" )
+    if (-e "$index_path" )
     {
-        system("gunzip < $index_path.gz > $index_path");
+        unless ( open(STREAM, "<", "$index_path") ) {
+            warn("apt-mirror: can't read index $index_path in process_index");
+            return;
+        }
+    }
+    elsif (-e "$index_path.gz" )
+    {
+        unless ( open(STREAM, "-|", "gzip -dc $index_path.gz") ) {
+            warn("apt-mirror: can't read index $index_path.gz in process_index");
+            return;
+        }
     }
     elsif (-e "$index_path.xz" )
     {
-        system("xz -d < $index_path.xz > $index_path");
+        unless ( open(STREAM, "-|", "xz -dc $index_path.xz") ) {
+            warn("apt-mirror: can't read index $index_path.xz in process_index");
+            return;
+        }
     }
     elsif (-e "$index_path.bz2" )
     {
-        system("bzip2 -d < $index_path.bz2 > $index_path");
+        unless ( open(STREAM, "-|", "bzip2 -dc $index_path.bz2") ) {
+            warn("apt-mirror: can't read index $index_path.bz2 in process_index");
+            return;
+        }
     }
-
-    unless ( open STREAM, "<$index_path" )
+    else
     {
-        warn("apt-mirror: can't open index $index_path in process_index");
+        warn("apt-mirror: can't handle index $index_path in process_index");
         return;
     }
 
