@@ -654,11 +654,6 @@ sub _stat
     return @res;
 }
 
-sub clear_stat_cache
-{
-    %stat_cache = ();
-}
-
 sub need_update
 {
     my ( $filename, $size_on_server ) = @_;
@@ -821,7 +816,7 @@ foreach (@config_binaries)
     }
 }
 
-clear_stat_cache();
+undef %stat_cache;
 
 print "]\n\n";
 
