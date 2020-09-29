@@ -919,11 +919,11 @@ clear_stat_cache();
 
 print "]\n\n";
 
-close $FILES_ALL;
-close $FILES_NEW;
-close $FILES_MD5;
-close $FILES_SHA1;
-close $FILES_SHA256;
+close $FILES_ALL    or die("apt-mirror: can't write to intermediate file (ALL)");
+close $FILES_NEW    or die("apt-mirror: can't write to intermediate file (NEW)");
+close $FILES_MD5    or die("apt-mirror: can't write to intermediate file (MD5)");
+close $FILES_SHA1   or die("apt-mirror: can't write to intermediate file (SHA1)");
+close $FILES_SHA256 or die("apt-mirror: can't write to intermediate file (SHA256)");
 
 ######################################################################################
 ## Main download
