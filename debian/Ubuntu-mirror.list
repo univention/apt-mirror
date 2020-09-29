@@ -1,29 +1,72 @@
 ############# config ##################
 #
-# set base_path    /var/spool/apt-mirror
+# Configuration for local directories: base, main repository, temporary files, log files
+#set base_path         /var/spool/apt-mirror
 #
-# set mirror_path  $base_path/mirror
-# set skel_path    $base_path/skel
-# set var_path     $base_path/var
-# set cleanscript $var_path/clean.sh
-# set defaultarch  <running host architecture>
-# set postmirror_script $var_path/postmirror.sh
-# set run_postmirror 0
-set nthreads     20
-set _tilde 0
+#set mirror_path       $base_path/mirror
+#set skel_path         $base_path/skel
+#set var_path          $base_path/var
+# Replace the tilde (~) used in URLs with the hex encoding (1) or not (0)
+set _tilde            0
+
+# The architecture to mirror by default is no explicit architecture is given:
+#set defaultarch       <running host architecture>
+# Download the Contents files (1) or not
+#set _contents         1
+
+# Proxy configuration used when (on,yes)
+#set use_proxy         off
+#set http_proxy        127.0.0.1:3128
+#set https_proxy       127.0.0.1:3128
+#set proxy_user        user
+#set proxy_password    password
+
+# wget related options
+# Number of parallel downloads
+set nthreads          20
+# Limit download rate for each parallel download; see <man:wget(1)> --limit-rate=amount
+#set limit_rate        100m
+# Send Basic HTTP authentication information with all requests (1) or only on demand (0)
+#set auth_no_challenge 0
+# Disable checking HTTPS certificaes (1) or not (0)
+#set no_check_certificate 0
+# Use --unlink with wget (for use with hardlinked directories)
+#set unlink            1
+
+# Perform an automatic cleanup after each run (1) or delay maintenance to $cleanscript (0)
+set _autoclean        0
+# Name of a script to generate, which can be called to remove unneeded files and directories
+#set cleanscript       $var_path/clean.sh
+# Run the user supplied script $postmirror_script (1) or not (0)
+#set run_postmirror    0
+#set postmirror_script $var_path/postmirror.sh
 #
 ############# end config ##############
 
+# Next follows the distributions to mirror similar to <man:sources.list(5>:
+# (deb | deb-$arch | deb-src [$options] $uri $parts
+# For $options only arch=$arch is understood.
+# $parts may either be "$suite $component..." or a "$path/".
+
+# Configure the distributions to download; by default the $defaultarch architecture is used:
 deb http://archive.ubuntu.com/ubuntu @CODENAME@ main restricted universe multiverse
 deb http://archive.ubuntu.com/ubuntu @CODENAME@-security main restricted universe multiverse
 deb http://archive.ubuntu.com/ubuntu @CODENAME@-updates main restricted universe multiverse
 #deb http://archive.ubuntu.com/ubuntu @CODENAME@-proposed main restricted universe multiverse
 #deb http://archive.ubuntu.com/ubuntu @CODENAME@-backports main restricted universe multiverse
 
+# mirror additional architectures
+#deb-amd64 http://archive.ubuntu.com/ubuntu @CODENAME@ main restricted universe multiverse
+# Alternative syntax:
+#deb [arch=amd64] http://archive.ubuntu.com/ubuntu @CODENAME@ main restricted universe multiverse
+
+# Also mirror source packages:
 deb-src http://archive.ubuntu.com/ubuntu @CODENAME@ main restricted universe multiverse
 deb-src http://archive.ubuntu.com/ubuntu @CODENAME@-security main restricted universe multiverse
 deb-src http://archive.ubuntu.com/ubuntu @CODENAME@-updates main restricted universe multiverse
 #deb-src http://archive.ubuntu.com/ubuntu @CODENAME@-proposed main restricted universe multiverse
 #deb-src http://archive.ubuntu.com/ubuntu @CODENAME@-backports main restricted universe multiverse
 
+# Setup automatic cleanup for files below the associated directory
 clean http://archive.ubuntu.com/ubuntu
+#skip-clean http://archive.ubuntu.com/ubuntu/dists/@CODENAME@-security/main
