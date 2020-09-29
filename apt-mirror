@@ -474,8 +474,6 @@ foreach ( keys %urls_to_download )
     s{^\w+://[^/]+/}{};
     s[~][%7E]g if get_variable("_tilde");
     $skipclean{$_} = 1;
-    $skipclean{$_} = 1 if s[\.gz$][];
-    $skipclean{$_} = 1 if s[\.xz$][];
 }
 
 ######################################################################################
@@ -968,9 +966,6 @@ foreach (@index_urls)
 {
     die("apt-mirror: invalid url in index_urls") unless s{^\w+://[^/]+/}{};
     copy_file( get_variable("skel_path") . "/" . sanitise_uri("$_"), get_variable("mirror_path") . "/" . sanitise_uri("$_") );
-    copy_file( get_variable("skel_path") . "/" . sanitise_uri("$_"), get_variable("mirror_path") . "/" . sanitise_uri("$_") ) if (s/\.gz$//);
-    copy_file( get_variable("skel_path") . "/" . sanitise_uri("$_"), get_variable("mirror_path") . "/" . sanitise_uri("$_") ) if (s/\.bz2$//);
-    copy_file( get_variable("skel_path") . "/" . sanitise_uri("$_"), get_variable("mirror_path") . "/" . sanitise_uri("$_") ) if (s/\.xz$//);
 }
 
 ######################################################################################
