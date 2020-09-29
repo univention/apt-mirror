@@ -8,8 +8,6 @@ use File::Path qw(make_path);
 use File::Basename;
 use Fcntl qw(:flock);
 
-my $config_file;
-
 # If you add/modify/delete any of these setting, please also update the manual page.
 my %config_variables = (
     "defaultarch" => `dpkg --print-architecture 2>/dev/null` || 'i386',
@@ -46,7 +44,7 @@ my %clean_directory = ();
 ######################################################################################
 ## Setting up $config_file variable
 
-$config_file = "/etc/apt/mirror.list";    # Default value
+my $config_file = "/etc/apt/mirror.list";    # Default value
 if ( $_ = shift )
 {
     die("apt-mirror: invalid config file specified") unless -e $_;
