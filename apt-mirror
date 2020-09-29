@@ -60,7 +60,7 @@ chomp $config_variables{"defaultarch"};
 
 sub round_number
 {
-    my $n = shift;
+    my ( $n ) = @_;
     my $minus = $n < 0 ? '-' : '';
     $n = abs($n);
     $n = int( ( $n + .05 ) * 10 ) / 10;
@@ -72,7 +72,7 @@ sub round_number
 
 sub format_bytes
 {
-    my $bytes     = shift;
+    my ( $bytes ) = @_;
     my $bytes_out = '0';
     my $size_name = 'bytes';
     my $KiB       = 1024;
@@ -106,7 +106,8 @@ sub format_bytes
 
 sub get_variable
 {
-    my $value = $config_variables{ shift @_ };
+    my ( $var ) = @_;
+    my $value = $config_variables{ $var };
     my $count = 16;
     while ( $value =~ s/\$(\w+)/$config_variables{$1}/xg )
     {
@@ -117,7 +118,7 @@ sub get_variable
 
 sub quoted_path
 {
-    my $path = shift;
+    my ( $path ) = @_;
     $path =~ s/'/'\\''/g;
     return "'" . $path . "'";
 }
@@ -140,7 +141,7 @@ sub unlock_aptmirror
 
 sub download_urls
 {
-    my $stage = shift;
+    my ( $stage ) = @_;
     my @urls;
     my $i = 0;
     my $pid;
@@ -202,7 +203,7 @@ sub download_urls
 
 sub remove_double_slashes
 {
-    local $_ = shift;
+    local ($_) = @_;
     while (s[(^|/)\./][$1]g) { }
     while (s[(?<!:)//][/]g) { }
     while (s[(^|(?<!:/)/)[^/]+/\.\./][$1]g) { }
@@ -213,7 +214,7 @@ sub remove_double_slashes
 
 sub sanitise_uri
 {
-    my $uri = shift;
+    my ( $uri ) = @_;
     $uri =~ s{^\w+://[^/]+/}{};
     $uri = remove_double_slashes($uri);
     return $uri;
@@ -310,8 +311,9 @@ my ( $url, $arch );
 
 sub add_url_to_download
 {
-    my $url = remove_double_slashes(shift);
-    $urls_to_download{$url} = shift;
+    my ( $url ) = @_;
+    $url = remove_double_slashes($url);
+    $urls_to_download{$url} = 1;
 }
 
 foreach (@config_sources)
@@ -400,8 +402,7 @@ sub find_translation_files_in_release
     # Look in the dists/$DIST/Release file for the translation files that belong
     # to the given component.
 
-    my $dist_uri  = shift;
-    my $component = shift;
+    my ( $dist_uri, $component ) = @_;
     my ( $release_uri, $release_path, $line ) = '';
 
     $release_uri  = $dist_uri . "Release";
@@ -455,8 +456,8 @@ sub process_translation_index
     # Extract all translation files from the dists/$DIST/$COMPONENT/i18n/Index
     # file. Fall back to parsing dists/$DIST/Release if i18n/Index is not found.
 
-    my $dist_uri  = remove_double_slashes(shift);
-    my $component = shift;
+    my ( $url, $component ) = @_;
+    my $dist_uri  = remove_double_slashes($url);
     my ( $base_uri, $index_uri, $index_path, $line ) = '';
 
     $base_uri   = $dist_uri . $component . "/i18n/";
@@ -545,9 +546,7 @@ sub find_dep11_files_in_release
     # Look in the dists/$DIST/Release file for the DEP-11 files that belong
     # to the given component and architecture.
 
-    my $dist_uri  = shift;
-    my $component = shift;
-    my $arch      = shift;
+    my ( $dist_uri, $component, $arch ) = @_;
     my ( $release_uri, $release_path, $line ) = '';
 
     $release_uri  = $dist_uri . "Release";
@@ -651,7 +650,7 @@ my %stat_cache = ();
 
 sub _stat
 {
-    my ($filename) = shift;
+    my ( $filename ) = @_;
     return @{ $stat_cache{$filename} } if exists $stat_cache{$filename};
     my @res = stat($filename);
     $stat_cache{$filename} = \@res;
@@ -665,8 +664,7 @@ sub clear_stat_cache
 
 sub need_update
 {
-    my $filename       = shift;
-    my $size_on_server = shift;
+    my ( $filename, $size_on_server ) = @_;
 
     my ( undef, undef, undef, undef, undef, undef, undef, $size ) = _stat($filename);
 
@@ -677,7 +675,7 @@ sub need_update
 
 sub remove_spaces($)
 {
-    my $hashref = shift;
+    my ( $hashref ) = @_;
     foreach ( keys %{$hashref} )
     {
         while ( substr( $hashref->{$_}, 0, 1 ) eq ' ' )
@@ -689,8 +687,7 @@ sub remove_spaces($)
 
 sub process_index
 {
-    my $uri   = shift;
-    my $index = shift;
+    my ( $uri, $index ) = @_;
     my ( $path, $package, $mirror, $files ) = '';
 
     $path = sanitise_uri($uri);
@@ -895,7 +892,7 @@ sub process_symlink
 
 sub process_file
 {
-    my $file = shift;
+    my ( $file ) = @_;
     $file =~ s[~][%7E]g if get_variable("_tilde");
     return 1 if $skipclean{remove_double_slashes($file)};
     return 1 if $file =~ /\/(?:pre|post)up\.sh(?:\.gpg)?$/;
@@ -908,7 +905,7 @@ sub process_file
 
 sub process_directory
 {
-    my $dir       = shift;
+    my ( $dir ) = @_;
     my $is_needed = 0;
     return 1 if $skipclean{remove_double_slashes($dir)};
     opendir( my $dir_h, $dir ) or die "apt-mirror: can't opendir $dir: $!";
