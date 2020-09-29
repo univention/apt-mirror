@@ -1,92 +1,5 @@
 #!/usr/bin/perl
 
-=pod
-
-=head1 NAME
-
-apt-mirror - apt sources mirroring tool
-
-=head1 SYNOPSIS
-
-apt-mirror [configfile]
-
-=head1 DESCRIPTION
-
-A small and efficient tool that lets you mirror a part of or
-the whole Debian GNU/Linux distribution or any other apt sources.
-
-Main features:
- * It uses a config similar to APT's F<sources.list>
- * It's fully pool compliant
- * It supports multithreaded downloading
- * It supports multiple architectures at the same time
- * It can automatically remove unneeded files
- * It works well on an overloaded Internet connection
- * It never produces an inconsistent mirror including while mirroring
- * It works on all POSIX compliant systems with Perl and wget
-
-=head1 COMMENTS
-
-apt-mirror uses F</etc/apt/mirror.list> as a configuration file.
-By default it is tuned to official Debian or Ubuntu mirrors. Change
-it for your needs.
-
-After you setup the configuration file you may run as root:
-
-    # su - apt-mirror -c apt-mirror
-
-Or uncomment the line in F</etc/cron.d/apt-mirror> to enable daily mirror updates.
-
-=head1 FILES
-
-F</etc/apt/mirror.list>
-        Main configuration file
-
-F</etc/cron.d/apt-mirror>
-        Cron configuration template
-
-F</var/spool/apt-mirror/mirror>
-        Mirror places here
-
-F</var/spool/apt-mirror/skel>
-        Place for temporarily downloaded indexes
-
-F</var/spool/apt-mirror/var>
-        Log files placed here. URLs and MD5 checksums also here.
-
-=head1 CONFIGURATION EXAMPLES
-
-The mirror.list configuration supports many options, the file is well commented explaining each option.
-Here are some sample mirror configuration lines showing the various supported ways:
-
-Normal:
-deb http://example.com/debian stable main contrib non-free
-
-Arch Specific: (many other architectures are supported)
-deb-powerpc http://example.com/debian stable main contrib non-free
-
-HTTP and FTP Auth or non-standard port:
-deb http://user:pass@example.com:8080/debian stable main contrib non-free
-
-HTTPS with sending Basic HTTP authentication information (plaintext username and password) for all requests:
-(this was default behaviour of Wget 1.10.2 and prior and is needed for some servers with new version of Wget)
-set auth_no_challenge 1
-deb https://user:pass@example.com:443/debian stable main contrib non-free
-
-HTTPS without checking certificate:
-set no_check_certificate 1
-deb https://example.com:443/debian stable main contrib non-free
-
-Source Mirroring:
-deb-src http://example.com/debian stable main contrib non-free
-
-=head1 AUTHORS
-
-Dmitry N. Hramtsov E<lt>hdn@nsu.ruE<gt>
-Brandon Holtsclaw E<lt>me@brandonholtsclaw.comE<gt>
-
-=cut
-
 use warnings;
 use strict;
 use File::Copy;
@@ -97,6 +10,7 @@ use Fcntl qw(:flock);
 
 my $config_file;
 
+# If you add/modify/delete any of these setting, please also update the manual page.
 my %config_variables = (
     "defaultarch" => `dpkg --print-architecture 2>/dev/null` || 'i386',
     "nthreads"    => 20,
@@ -1088,3 +1002,247 @@ if ( get_variable("run_postmirror") && -f get_variable("run_postmirror") )
 }
 
 unlock_aptmirror();
+
+__END__
+
+=pod
+
+=head1 NAME
+
+apt-mirror - apt sources mirroring tool
+
+=head1 SYNOPSIS
+
+apt-mirror [configfile]
+
+=head1 DESCRIPTION
+
+A small and efficient tool that lets you mirror a part of or
+the whole Debian GNU/Linux distribution or any other apt sources.
+
+Main features:
+ * It uses a config similar to APT's F<sources.list>
+ * It's fully pool compliant
+ * It supports multithreaded downloading
+ * It supports multiple architectures at the same time
+ * It can automatically remove unneeded files
+ * It works well on an overloaded Internet connection
+ * It never produces an inconsistent mirror including while mirroring
+ * It works on all POSIX compliant systems with Perl and F<wget>
+
+=head1 COMMENTS
+
+F<apt-mirror> uses F</etc/apt/mirror.list> as a configuration file.
+By default it is tuned to official Debian or Ubuntu mirrors. Change
+it for your needs.
+
+After you setup the configuration file you may run as root:
+
+    # su - apt-mirror -c apt-mirror
+
+Or uncomment the line in F</etc/cron.d/apt-mirror> to enable daily mirror updates.
+
+=head1 FILES
+
+F</etc/apt/mirror.list>
+        Main configuration file
+
+F</etc/cron.d/apt-mirror>
+        Cron configuration template
+
+F</var/spool/apt-mirror/mirror>
+        Mirror places here
+
+F</var/spool/apt-mirror/skel>
+        Place for temporarily downloaded indexes
+
+F</var/spool/apt-mirror/var>
+        Log files placed here. URLs and MD5 checksums also here.
+
+=head1 CONFIGURATION
+
+The F<mirror.list> configuration supports many options, the file is well commented explaining each option.
+
+=head2 SETTINGS
+
+The configuration can be changed changed by using the C<set> command followed by a option name and its value.
+Values may reference other options and are recursively substituted to a depth of 16 nestings.
+
+=over 2
+
+=item C<base_path>
+
+Base directory path. Not directly used, but used by other options.
+Default: I</var/spool/apt-mirror>
+
+=item C<mirror_path>
+
+Directory where files are mirrored to.
+Default: I<$base_path/mirror>
+
+=item C<skel_path>
+
+Directory where index files are downloaded into before being processed.
+Default: I<$base_path/skel>
+
+=item C<var_path>
+
+Directory where temporary and log files are kept in.
+Default: I<$base_path/var>
+
+=item C<_tilde>
+
+If set to B<1>, the tilde C<~> is replaced with the hex-encoded C<%7E> version.
+Otherwise the tile is also used for local paths.
+Default: B<0>
+
+=item C<defaultarch>
+
+Specify the default architecture for the binary packages to mirror.
+Defaults to the host architecture or B<i386> as a fallback.
+
+=item C<_contents>
+
+The I<Contents> files are also mirrored when set to B<1>.
+Default: B<1>
+
+=item C<use_proxy>
+
+If set to B<on> or B<yes>, the following proxy settings for HTTP and HTTPS are explicitly configured for F<wget>.
+Otherwise no proxy is used or the ones configured through environment variables.
+Default: B<0>
+
+=item C<http_proxy>, C<https_proxy>
+
+Proxy for http:// and https:// requests.
+
+=item C<proxy_user>, C<proxy_password>
+
+User name and password for proxy authentication.
+
+=item C<nthreads>
+
+The number of concurrent download processes.
+Default: B<20>
+
+=item C<limit_rate>
+
+Limit the download speed of each F<wget> process to the given amount in bytes per second.
+Default: B<100m>
+
+=item C<auth_no_challenge>
+
+By default B<0> F<wget> only sends HTTP authentication information when requested by the remote server.
+By setting this to B<1> the information is B<alwas> sent.
+
+=item C<no_check_certificate>
+
+If set to B<1> F<wget> will not check the HTTPS certificates for validity.
+Default: B<0>
+
+=item C<unlink>
+
+If set to B<1> files will be unlinked before being overwritten.
+This may be useful when using hard-links.
+Default: B<0>
+
+=item C<_autoclean>
+
+If set to B<1>, no longer referenced files are automatically cleaned up.
+Otherwise the C<cleanscript> can be used.
+Default: B<0>
+
+=item C<cleanscript>
+
+The name of a script created by F<apt-mirror>, which can be executed to cleanup no longer referenced files.
+The option C<_autoclean> must be disabled and at least one C<clean> statement must be used.
+Default: I<$base_path/clean.sh>
+
+=item C<run_postmirror>
+
+Run the user supplied script C<postmirror_script> after mirroring is complete.
+Default: B<0>
+
+=item C<postmirror_script>
+
+If C<run_postmirror> is enabled, this specified the script to execute.
+Default: I<$var_path/postmirror.sh>
+
+=back
+
+=head2 STATEMENTS
+
+The following statements can be used to configure the distributions to mirror and to clean up:
+
+=over 2
+
+=item C<deb $uri $parts>
+
+Mirror the default architecture of distribution I<$uri>.
+I<$parts> may either be a suite name and a list of components C<stable main contrib non-free> or a C<$path/> for flat repository.
+
+=item C<deb-$arch $uri $parts>
+
+Mirror the given architecture I<$arch>.
+
+=item C<deb [arch=$arch] $uri $parts>
+
+Mirror the given architecture I<$arch>.
+
+=item C<deb-src $uri $parts>
+
+Mirror the source packages.
+
+=item C<clean $uri>
+
+Enable cleaning up files below the local directory corresponding to the given I<$uri>.
+
+=item C<skip-clean $uri>
+
+Disable cleaning up files below the local directory corresponding to the given I<$uri>.
+
+=back
+
+=head2 EXAMPLES
+
+Here are some sample mirror configuration lines showing the various supported ways:
+
+Normal:
+
+    deb http://example.com/debian stable main contrib non-free
+
+Arch Specific: (many other architectures are supported)
+
+    deb-powerpc http://example.com/debian stable main contrib non-free
+    deb [arch=powerpc] http://example.com/debian stable main contrib non-free
+
+HTTP and FTP Auth or non-standard port:
+
+    deb http://user:pass@example.com:8080/debian stable main contrib non-free
+
+HTTPS with sending Basic HTTP authentication information (plaintext username and password) for all requests:
+(this was default behaviour of Wget 1.10.2 and prior and is needed for some servers with new version of Wget)
+
+    set auth_no_challenge 1
+    deb https://user:pass@example.com:443/debian stable main contrib non-free
+
+HTTPS without checking certificate:
+
+    set no_check_certificate 1
+    deb https://example.com:443/debian stable main contrib non-free
+
+Source Mirroring:
+
+    deb-src http://example.com/debian stable main contrib non-free
+
+=head1 AUTHORS
+
+Dmitry N. Hramtsov E<lt>hdn@nsu.ruE<gt>
+Brandon Holtsclaw E<lt>me@brandonholtsclaw.comE<gt>
+
+=head1 SEE ALSO
+
+L<sources.list(5)>,
+L<wget(1)>
+
+=cut
