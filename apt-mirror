@@ -931,17 +931,14 @@ my ( $i, $total ) = ( 0, scalar @rm_files );
 
 if ( get_variable("_autoclean") )
 {
-
     my $size_output = format_bytes($unnecessary_bytes);
     print "$size_output in $total files and " . scalar(@rm_dirs) . " directories will be freed...";
 
     foreach (@rm_files) { unlink $_; }
     foreach (@rm_dirs)  { rmdir $_; }
-
 }
 else
 {
-
     my $size_output = format_bytes($unnecessary_bytes);
     print "$size_output in $total files and " . scalar(@rm_dirs) . " directories can be freed.\n";
     print "Run " . get_variable("cleanscript") . " for this purpose.\n\n";
@@ -974,7 +971,6 @@ else
     print CLEAN "echo\n";
 
     close CLEAN;
-
 }
 
 # Make clean script executable
