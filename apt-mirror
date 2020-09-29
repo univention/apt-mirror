@@ -307,7 +307,6 @@ lock_aptmirror();
 ## Skel download
 
 my %urls_to_download = ();
-my ( $url, $arch );
 
 sub add_url_to_download
 {
@@ -322,7 +321,7 @@ foreach (@config_sources)
 
     if (@components)
     {
-        $url = $uri . "/dists/" . $distribution . "/";
+        my $url = $uri . "/dists/" . $distribution . "/";
 
         add_url_to_download( $url . "InRelease" );
         add_url_to_download( $url . "Release" );
@@ -349,7 +348,7 @@ foreach (@config_binaries)
 
     if (@components)
     {
-        $url = $uri . "/dists/" . $distribution . "/";
+        my $url = $uri . "/dists/" . $distribution . "/";
 
         add_url_to_download( $url . "InRelease" );
         add_url_to_download( $url . "Release" );
@@ -514,7 +513,7 @@ foreach (@config_binaries)
     print "T";
     if (@components)
     {
-        $url = $uri . "/dists/" . $distribution . "/";
+        my $url = $uri . "/dists/" . $distribution . "/";
 
         my $component;
         foreach $component (@components)
@@ -603,7 +602,7 @@ foreach (@config_binaries)
     print "D";
     if (@components)
     {
-        $url = $uri . "/dists/" . $distribution . "/";
+        my $url = $uri . "/dists/" . $distribution . "/";
 
         my $component;
         foreach $component (@components)
