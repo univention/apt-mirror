@@ -1015,8 +1015,6 @@ sub process_directory
     return $is_needed;
 }
 
-chdir get_variable("mirror_path") or die("apt-mirror: can't chdir to mirror");
-
 foreach ( keys %clean_directory )
 {
     process_directory($_) if -d $_ && !-l $_;
@@ -1031,8 +1029,6 @@ if ( get_variable("_autoclean") )
 
     my $size_output = format_bytes($unnecessary_bytes);
     print "$size_output in $total files and " . scalar(@rm_dirs) . " directories will be freed...";
-
-    chdir get_variable("mirror_path") or die("apt-mirror: can't chdir to mirror");
 
     foreach (@rm_files) { unlink $_; }
     foreach (@rm_dirs)  { rmdir $_; }
