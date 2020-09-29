@@ -1,4 +1,5 @@
 #!/usr/bin/perl
+package Local::AptMirror;
 
 use warnings;
 use strict;
@@ -9,7 +10,7 @@ use File::Basename;
 use Fcntl qw(:flock);
 
 # If you add/modify/delete any of these setting, please also update the manual page.
-my %config_variables = (
+our %config_variables = (
     "defaultarch" => `dpkg --print-architecture 2>/dev/null` || 'i386',
     "nthreads"    => 20,
     "base_path"   => '/var/spool/apt-mirror',
@@ -32,6 +33,7 @@ my %config_variables = (
     "proxy_user"           => '',
     "proxy_password"       => ''
 );
+chomp $config_variables{"defaultarch"};
 
 my @config_binaries = ();
 my @config_sources  = ();
@@ -45,13 +47,6 @@ my %clean_directory = ();
 ## Setting up $config_file variable
 
 my $config_file = "/etc/apt/mirror.list";    # Default value
-if ( $_ = shift )
-{
-    die("apt-mirror: invalid config file specified") unless -e $_;
-    $config_file = $_;
-}
-
-chomp $config_variables{"defaultarch"};
 
 ######################################################################################
 ## Common subroutines
@@ -249,6 +244,8 @@ sub parse_config_line
     return %config;
 }
 
+sub load_config
+{
 open CONFIG, "<$config_file" or die("apt-mirror: can't open config file ($config_file)");
 while (<CONFIG>)
 {
@@ -285,9 +282,13 @@ while (<CONFIG>)
 close CONFIG;
 
 die("Please explicitly specify 'defaultarch' in mirror.list") unless get_variable("defaultarch");
+}
+
 
 ######################################################################################
 ## Create the 3 needed directories if they don't exist yet
+sub create_directories
+{
 my @needed_directories = ( get_variable("mirror_path"), get_variable("skel_path"), get_variable("var_path") );
 foreach my $needed_directory (@needed_directories)
 {
@@ -296,10 +297,7 @@ foreach my $needed_directory (@needed_directories)
         make_path($needed_directory) or die("apt-mirror: can't create $needed_directory directory");
     }
 }
-#
-#######################################################################################
-
-lock_aptmirror();
+}
 
 ######################################################################################
 ## Skel download
@@ -312,6 +310,10 @@ sub add_url_to_download
     $url = remove_double_slashes($url);
     $urls_to_download{$url} = 1;
 }
+
+sub download_skel
+{
+%urls_to_download = ();
 
 foreach (@config_sources)
 {
@@ -388,11 +390,10 @@ foreach ( keys %urls_to_download )
     s[~][%7E]g if get_variable("_tilde");
     $skipclean{$_} = 1;
 }
+}
 
 ######################################################################################
 ## Translation index download
-
-%urls_to_download = ();
 
 sub find_translation_files_in_release
 {
@@ -503,6 +504,10 @@ sub process_translation_index
     close STREAM;
 }
 
+sub download_translations
+{
+%urls_to_download = ();
+
 print "Processing translation indexes: [";
 
 foreach (@config_binaries)
@@ -532,11 +537,10 @@ foreach ( keys %urls_to_download )
     s[~][%7E]g if get_variable("_tilde");
     $skipclean{$_} = 1;
 }
+}
 
 ######################################################################################
 ## DEP-11 index download
-
-%urls_to_download = ();
 
 sub find_dep11_files_in_release
 {
@@ -592,6 +596,10 @@ sub find_dep11_files_in_release
     }
 }
 
+sub download_dep11
+{
+%urls_to_download = ();
+
 print "Processing DEP-11 indexes: [";
 
 foreach (@config_binaries)
@@ -621,29 +629,14 @@ foreach ( keys %urls_to_download )
     s[~][%7E]g if get_variable("_tilde");
     $skipclean{$_} = 1;
 }
+}
 
 ######################################################################################
 ## Main download preparations
 
-%urls_to_download = ();
-
-open my $FILES_ALL, ">" . get_variable("var_path") . "/ALL" or die("apt-mirror: can't write to intermediate file (ALL)");
-open my $FILES_NEW, ">" . get_variable("var_path") . "/NEW" or die("apt-mirror: can't write to intermediate file (NEW)");
-open my $FILES_MD5, ">" . get_variable("var_path") . "/MD5" or die("apt-mirror: can't write to intermediate file (MD5)");
-open my $FILES_SHA1, ">" . get_variable("var_path") . "/SHA1" or die("apt-mirror: can't write to intermediate file (SHA1)");
-open my $FILES_SHA256, ">" . get_variable("var_path") . "/SHA256" or die("apt-mirror: can't write to intermediate file (SHA256)");
-my %hashes_bin = (
-    "MD5sum:" => $FILES_MD5,
-    "SHA1:" => $FILES_SHA1,
-    "SHA256:" => $FILES_SHA256,
-);
-my %hashes_dsc = (
-    "Files:" => $FILES_MD5,
-    "Checksums-Sha1:" => $FILES_SHA1,
-    "Checksums-Sha256:" => $FILES_SHA256,
-);
-
 my %stat_cache = ();
+my ( $FILES_ALL, $FILES_NEW, $FILES_MD5, $FILES_SHA1, $FILES_SHA256 );
+my ( %hashes_bin, %hashes_dsc );
 
 sub _stat
 {
@@ -778,6 +771,27 @@ sub process_index
     close STREAM;
 }
 
+sub download_packages
+{
+%urls_to_download = ();
+%stat_cache = ();
+
+open $FILES_ALL, ">" . get_variable("var_path") . "/ALL" or die("apt-mirror: can't write to intermediate file (ALL)");
+open $FILES_NEW, ">" . get_variable("var_path") . "/NEW" or die("apt-mirror: can't write to intermediate file (NEW)");
+open $FILES_MD5, ">" . get_variable("var_path") . "/MD5" or die("apt-mirror: can't write to intermediate file (MD5)");
+open $FILES_SHA1, ">" . get_variable("var_path") . "/SHA1" or die("apt-mirror: can't write to intermediate file (SHA1)");
+open $FILES_SHA256, ">" . get_variable("var_path") . "/SHA256" or die("apt-mirror: can't write to intermediate file (SHA256)");
+%hashes_bin = (
+    "MD5sum:" => $FILES_MD5,
+    "SHA1:" => $FILES_SHA1,
+    "SHA256:" => $FILES_SHA256,
+);
+%hashes_dsc = (
+    "Files:" => $FILES_MD5,
+    "Checksums-Sha1:" => $FILES_SHA1,
+    "Checksums-Sha256:" => $FILES_SHA256,
+);
+
 print "Processing indexes: [";
 
 foreach (@config_sources)
@@ -842,6 +856,7 @@ my $size_output = format_bytes($need_bytes);
 print "$size_output will be downloaded into archive.\n";
 
 download_urls( "archive", sort keys %urls_to_download );
+}
 
 ######################################################################################
 ## Copy skel to main archive
@@ -865,10 +880,13 @@ sub copy_file
     utime( $atime, $mtime, $to ) or die("apt-mirror: can't utime $to");
 }
 
+sub copy_index
+{
 foreach (@index_urls)
 {
     die("apt-mirror: invalid url in index_urls") unless s{^\w+://[^/]+/}{};
     copy_file( get_variable("skel_path") . "/" . sanitise_uri("$_"), get_variable("mirror_path") . "/" . sanitise_uri("$_") );
+}
 }
 
 ######################################################################################
@@ -913,6 +931,8 @@ sub process_directory
     return $is_needed;
 }
 
+sub do_clean
+{
 foreach ( keys %clean_directory )
 {
     process_directory($_) if -d $_ && !-l $_;
@@ -969,7 +989,10 @@ else
 # Make clean script executable
 my $perm = ( stat get_variable("cleanscript") )[2] & 07777;
 chmod( $perm | 0111, get_variable("cleanscript") );
+}
 
+sub do_postrun
+{
 if ( get_variable("run_postmirror") && -f get_variable("run_postmirror") )
 {
     my $postscript = get_variable("postmirror_script");
@@ -985,8 +1008,27 @@ if ( get_variable("run_postmirror") && -f get_variable("run_postmirror") )
     }
     print "\nPost Mirror script has completed. See above output for any possible errors.\n\n";
 }
+}
 
-unlock_aptmirror();
+sub run
+{
+    my ( undef, $cfg ) = @_;
+    $config_file = $cfg if defined $cfg;
+    die("apt-mirror: invalid config file specified: $config_file") unless -e $config_file;
+    load_config();
+    create_directories();
+    lock_aptmirror();
+    download_skel();
+    download_translations();
+    download_dep11();
+    download_packages();
+    copy_index();
+    do_clean();
+    do_postrun();
+    unlock_aptmirror();
+}
+
+__PACKAGE__->run( @ARGV ) unless caller();
 
 __END__
 
