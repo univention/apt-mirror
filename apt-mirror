@@ -719,11 +719,21 @@ foreach ( keys %urls_to_download )
 
 %urls_to_download = ();
 
-open FILES_ALL, ">" . get_variable("var_path") . "/ALL" or die("apt-mirror: can't write to intermediate file (ALL)");
-open FILES_NEW, ">" . get_variable("var_path") . "/NEW" or die("apt-mirror: can't write to intermediate file (NEW)");
-open FILES_MD5, ">" . get_variable("var_path") . "/MD5" or die("apt-mirror: can't write to intermediate file (MD5)");
-open FILES_SHA1, ">" . get_variable("var_path") . "/SHA1" or die("apt-mirror: can't write to intermediate file (SHA1)");
-open FILES_SHA256, ">" . get_variable("var_path") . "/SHA256" or die("apt-mirror: can't write to intermediate file (SHA256)");
+open my $FILES_ALL, ">" . get_variable("var_path") . "/ALL" or die("apt-mirror: can't write to intermediate file (ALL)");
+open my $FILES_NEW, ">" . get_variable("var_path") . "/NEW" or die("apt-mirror: can't write to intermediate file (NEW)");
+open my $FILES_MD5, ">" . get_variable("var_path") . "/MD5" or die("apt-mirror: can't write to intermediate file (MD5)");
+open my $FILES_SHA1, ">" . get_variable("var_path") . "/SHA1" or die("apt-mirror: can't write to intermediate file (SHA1)");
+open my $FILES_SHA256, ">" . get_variable("var_path") . "/SHA256" or die("apt-mirror: can't write to intermediate file (SHA256)");
+my %hashes_bin = (
+    "MD5sum:" => $FILES_MD5,
+    "SHA1:" => $FILES_SHA1,
+    "SHA256:" => $FILES_SHA256,
+);
+my %hashes_dsc = (
+    "Files:" => $FILES_MD5,
+    "Checksums-Sha1:" => $FILES_SHA1,
+    "Checksums-Sha256:" => $FILES_SHA256,
+);
 
 my %stat_cache = ();
 
@@ -816,7 +826,6 @@ sub process_index
         chomp $package;
         my ( undef, %lines ) = split( /^([\w\-]+:)/m, $package );
 
-        $lines{"Directory:"} = "" unless defined $lines{"Directory:"};
         chomp(%lines);
         remove_spaces( \%lines );
 
@@ -824,33 +833,44 @@ sub process_index
         {    # Packages index
             my $rel = remove_double_slashes( $path . "/" . $lines{"Filename:"} );
             $skipclean{ $rel } = 1;
-            print FILES_ALL $rel . "\n";
-            print FILES_MD5 $lines{"MD5sum:"} . "  " . $rel . "\n" if defined $lines{"MD5sum:"};
-            print FILES_SHA1 $lines{"SHA1:"} . "  " . $rel . "\n" if defined $lines{"SHA1:"};
-            print FILES_SHA256 $lines{"SHA256:"} . "  " . $rel . "\n" if defined $lines{"SHA256:"};
+            print $FILES_ALL $rel . "\n";
+            for my $alg ( keys %hashes_bin )
+            {
+                print { $hashes_bin{$alg} } $lines{$alg} . "  " . $rel . "\n" if defined $lines{$alg};
+            }
             if ( need_update( $mirror . "/" . $lines{"Filename:"}, $lines{"Size:"} ) )
             {
-                print FILES_NEW $rel. "\n";
+                print $FILES_NEW $rel. "\n";
                 add_url_to_download( $uri . "/" . $lines{"Filename:"}, $lines{"Size:"} );
             }
         }
-        else
+        elsif ( exists $lines{"Directory:"} )
         {    # Sources index
-            foreach ( split( /\n/, $lines{"Files:"} ) )
+            foreach my $alg ( keys %hashes_dsc )
             {
-                next if $_ eq '';
-                my @file = split;
-                die("apt-mirror: invalid Sources format") if @file != 3;
-                my $rel = remove_double_slashes( $path . "/" . $lines{"Directory:"} . "/" . $file[2] );
-                $skipclean{ $rel } = 1;
-                print FILES_ALL $rel . "\n";
-                print FILES_MD5 $file[0] . "  " . $rel . "\n";
-                if ( need_update( $mirror . "/" . $lines{"Directory:"} . "/" . $file[2], $file[1] ) )
+                next unless exists $lines{$alg};
+                my $first = 0;
+                foreach ( split( /\n/, $lines{$alg} ) )
                 {
-                    print FILES_NEW $rel. "\n";
-                    add_url_to_download( $uri . "/" . $lines{"Directory:"} . "/" . $file[2], $file[1] );
+                    next if $_ eq '';
+                    my ( $hash, $size, $name ) = split;
+                    my $rel = remove_double_slashes( $path . "/" . $lines{"Directory:"} . "/" . $name );
+                    $skipclean{ $rel } = 1;
+                    print { $hashes_dsc{$alg} } $hash . "  " . $rel . "\n";
+                    next unless $first;
+                    $first = 1;
+                    print $FILES_ALL $rel . "\n";
+                    if ( need_update( $mirror . "/" . $lines{"Directory:"} . "/" . $name, $size ) )
+                    {
+                        print $FILES_NEW $rel. "\n";
+                        add_url_to_download( $uri . "/" . $lines{"Directory:"} . "/" . $name, $size );
+                    }
                 }
             }
+        }
+        else
+        {
+            die("apt-mirror: Unknown section: $package");
         }
     }
 
@@ -899,11 +919,11 @@ clear_stat_cache();
 
 print "]\n\n";
 
-close FILES_ALL;
-close FILES_NEW;
-close FILES_MD5;
-close FILES_SHA1;
-close FILES_SHA256;
+close $FILES_ALL;
+close $FILES_NEW;
+close $FILES_MD5;
+close $FILES_SHA1;
+close $FILES_SHA256;
 
 ######################################################################################
 ## Main download
