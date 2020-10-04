@@ -1,9 +1,12 @@
 VERSION := 0.5.4
-DIST := apt-mirror CHANGELOG LICENSE Makefile mirror.list postmirror.sh README.md .perltidyrc
+DIST := apt-mirror CHANGELOG LICENSE Makefile mirror.list postmirror.sh README.md test.pl .perltidyrc
 BASE_PATH := /var/spool/apt-mirror
 PREFIX ?= /usr/local
 
 all:
+
+test:
+	./test.pl
 
 dist: apt-mirror-$(VERSION).tar.xz
 
@@ -28,4 +31,4 @@ install:
 clean:
 	rm -f *.tar.*
 
-.PHONY: all clean dist install
+.PHONY: all test clean dist install
